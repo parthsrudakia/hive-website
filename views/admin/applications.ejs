@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Admin - Applications</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a18;
+      --cream: #f5f2ed;
+      --accent: #d4920b;
+      --accent-dark: #b87d09;
+      --white: #fefdfb;
+      --muted: #8a8378;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background-color: var(--cream); color: var(--ink); min-height: 100vh; }
+
+    .admin-nav { background: var(--ink); color: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; }
+    .admin-nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--white); text-decoration: none; letter-spacing: 1px; }
+    .admin-nav-brand span { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-left: 10px; }
+    .admin-nav-right { display: flex; align-items: center; gap: 20px; font-size: 14px; }
+    .admin-nav-right .admin-greeting { color: #b0ada6; }
+    .admin-nav-right a { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; }
+    .admin-nav-right a:hover { color: var(--accent-dark); }
+
+    .admin-tabs { display: flex; gap: 0; background: var(--white); border-bottom: 1px solid #e0ddd7; padding: 0 32px; }
+    .admin-tab { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .admin-tab:hover { color: var(--ink); }
+    .admin-tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+
+    .admin-content { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .admin-header h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; }
+    .admin-header .count { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 12px; }
+
+    .table-wrapper { background: var(--white); border: 1px solid #e0ddd7; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(26,26,24,0.04); }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .data-table thead { background: #f8f6f2; }
+    .data-table th { padding: 12px 16px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid #e0ddd7; }
+    .data-table td { padding: 14px 16px; border-bottom: 1px solid #eceae5; vertical-align: top; }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover { background: #faf9f6; }
+
+    .app-name { font-weight: 600; }
+    .app-email { color: var(--muted); font-size: 13px; }
+    .app-about { max-width: 320px; font-size: 13px; line-height: 1.5; color: #555; }
+    .app-social a { color: var(--accent-dark); text-decoration: none; font-size: 13px; word-break: break-all; }
+    .app-social a:hover { text-decoration: underline; }
+    .app-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .empty-state p { font-size: 15px; }
+
+    .btn-delete { display: inline-block; padding: 5px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #b91c1c; background: #fef2f2; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+    .btn-delete:hover { background: #fecaca; }
+    .delete-form { display: inline; margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
+    <div class="admin-nav-right">
+      <span class="admin-greeting">Hello, <%= adminName %></span>
+      <a href="/admin/logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="admin-tabs">
+    <a href="/admin/dashboard" class="admin-tab">Listings</a>
+    <a href="/admin/bookings" class="admin-tab">Bookings</a>
+    <a href="/admin/applications" class="admin-tab active">Applications</a>
+    <a href="/admin/landlord-inquiries" class="admin-tab">Landlord Inquiries</a>
+  </div>
+
+  <main class="admin-content">
+    <div class="admin-header">
+      <h2>Applications <span class="count">(<%= applications.length %>)</span></h2>
+    </div>
+
+    <% if (applications.length === 0) { %>
+      <div class="table-wrapper">
+        <div class="empty-state">
+          <p>No applications yet.</p>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>About</th>
+              <th>Social / LinkedIn</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% applications.forEach(function(app) { %>
+            <tr>
+              <td class="app-name"><%= app.full_name %></td>
+              <td>
+                <div><%= app.email %></div>
+                <% if (app.phone) { %><div class="app-email"><%= app.phone %></div><% } %>
+              </td>
+              <td class="app-about"><%= app.about %></td>
+              <td class="app-social">
+                <% if (app.social_media && app.social_media.startsWith('http')) { %>
+                  <a href="<%= app.social_media %>" target="_blank"><%= app.social_media %></a>
+                <% } else { %>
+                  <%= app.social_media %>
+                <% } %>
+              </td>
+              <td class="app-date"><%= new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+              <td>
+                <form class="delete-form" action="/admin/applications/<%= app.id %>/delete" method="POST" onsubmit="return confirm('Delete this application?')">
+                  <button type="submit" class="btn-delete">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

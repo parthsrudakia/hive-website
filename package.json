@@ -1,0 +1,19 @@
+{
+  "name": "haven-residences",
+  "version": "1.0.0",
+  "description": "Haven Residences wireframe",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^17.3.1",
+    "ejs": "^4.0.1",
+    "express": "^4.18.2",
+    "express-session": "^1.19.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^8.0.1",
+    "pg": "^8.18.0"
+  }
+}

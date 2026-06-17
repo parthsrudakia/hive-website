@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= listing.title %> — Hive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #1a1a18;
+  --cream: #f5f2ed;
+  --warm: #e8e3db;
+  --stone: #9e9789;
+  --muted: #6b6358;
+  --accent: #d4920b;
+  --accent-dark: #b87d09;
+  --accent-text: #9a6f08;
+  --white: #fefdfb;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--white);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ===== UTILITY ===== */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 clamp(24px, 5vw, 80px); }
+
+/* ===== NAV ===== */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 20px 0;
+  background: rgba(254,253,251,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: none;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav .container {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+}
+.nav-logo svg { flex-shrink: 0; }
+.nav-logo .logo-text { display: flex; flex-direction: column; line-height: 1; }
+.nav-logo .logo-name {
+  font-family: var(--sans); font-weight: 700; font-size: 1.15rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
+}
+.nav-logo .logo-tag {
+  font-family: var(--sans); font-size: 0.48rem; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3px;
+  color: var(--ink); opacity: 0.5;
+}
+.nav-links { display: flex; gap: 36px; align-items: center; }
+.nav-links a {
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.nav-links a:hover { color: var(--accent-text); }
+.nav-cta {
+  font-size: 0.78rem !important;
+  padding: 10px 24px;
+  border: 1px solid var(--accent-text) !important;
+  color: var(--accent-text) !important;
+  transition: all 0.3s !important;
+}
+.nav-login {
+  font-size: 0.78rem !important;
+  padding: 10px 24px;
+  background: var(--accent) !important;
+  color: var(--ink) !important;
+  transition: all 0.3s !important;
+}
+.nav-mobile { display: none; background: none; border: none; cursor: pointer; }
+.nav-mobile span {
+  display: block; width: 24px; height: 1.5px; background: var(--ink);
+  margin: 6px 0; transition: all 0.3s;
+}
+
+/* ===== LISTING HERO (Header + Gallery) ===== */
+.listing-hero {
+  padding-top: 90px;
+  background: var(--cream);
+}
+/* Header row: title left, price right */
+.listing-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 12px 0 10px;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+  transition: color 0.3s;
+}
+.back-link:hover { color: var(--ink); }
+.back-link svg { width: 14px; height: 14px; }
+.listing-highlights {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 6px;
+}
+.listing-header-left h1 {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 300;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+.listing-location {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.listing-address {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--stone);
+}
+.listing-header-right {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  padding-top: 2px;
+}
+.listing-header-right .price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.listing-header-right .price-amount {
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 400;
+  color: var(--ink);
+}
+.listing-header-right .price-period {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+/* Share button */
+.hero-cta-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--stone);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.hero-cta-share svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+/* Share toast notification */
+.share-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 12px 28px;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.share-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.hero-stats {
+  display: flex;
+  gap: clamp(14px, 2vw, 24px);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+.hero-stat svg {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.hero-stat-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--stone);
+  opacity: 0.4;
+}
+
+/* Gallery: Blueground-style — large left, 2x2 grid right */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  height: clamp(340px, 38vw, 480px);
+}
+.gallery-main {
+  position: relative;
+  grid-row: 1 / 3;
+  grid-column: 1 / 2;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.gallery-main:hover { opacity: 0.92; }
+.gallery-thumb {
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.gallery-thumb:hover { opacity: 0.85; }
+.gallery-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--warm);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.gallery-more:hover { background: var(--stone); color: var(--ink); }
+.gallery-placeholder {
+  grid-row: 1 / 3;
+  grid-column: 1 / -1;
+  background: linear-gradient(145deg, #d4ccc0 0%, #b8a898 30%, #a89080 60%, #c4b8a8 100%);
+}
+.gallery-actions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+.gallery-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(26,26,24,0.7);
+  color: var(--white);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  border: none;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.3s;
+}
+.gallery-action-btn:hover {
+  background: rgba(26,26,24,0.88);
+}
+.gallery-action-btn svg {
+  flex-shrink: 0;
+}
+
+/* ===== LIGHTBOX ===== */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(26,26,24,0.95);
+  align-items: center;
+  justify-content: center;
+}
+.lightbox.open { display: flex; }
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 0;
+}
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 1.6rem;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 20px;
+  transition: color 0.3s;
+}
+.lightbox-arrow:hover { color: var(--white); }
+.lightbox-prev { left: 16px; }
+.lightbox-next { right: 16px; }
+.lightbox-counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+/* ===== FLOOR PLAN MODAL ===== */
+.floorplan-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(26,26,24,0.96);
+  align-items: center;
+  justify-content: center;
+}
+.floorplan-modal.open { display: flex; }
+.floorplan-modal-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.floorplan-img-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  cursor: grab;
+}
+.floorplan-img-wrapper:active { cursor: grabbing; }
+.floorplan-img {
+  max-width: 85vw;
+  max-height: 85vh;
+  object-fit: contain;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.floorplan-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 1.8rem;
+  cursor: pointer;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+  z-index: 10;
+}
+.floorplan-close:hover { color: var(--white); }
+.floorplan-zoom-controls {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+}
+.floorplan-zoom-btn {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.floorplan-zoom-btn:hover {
+  background: rgba(255,255,255,0.2);
+  color: var(--white);
+}
+.floorplan-label {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.4);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+/* When no floor plan exists, show a "coming soon" state */
+.floorplan-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+}
+.floorplan-placeholder svg {
+  width: 48px;
+  height: 48px;
+}
+.floorplan-placeholder p {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+/* ===== MAIN CONTENT ===== */
+.detail-main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: clamp(40px, 5vw, 80px);
+  padding: clamp(40px, 5vw, 64px) 0 clamp(60px, 8vw, 100px);
+}
+.detail-content {
+  min-width: 0;
+}
+
+/* ===== DETAIL SECTIONS ===== */
+.detail-section {
+  margin-bottom: clamp(36px, 5vw, 56px);
+}
+.detail-section-title {
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--warm);
+}
+.detail-description {
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: rgba(26,26,24,0.7);
+}
+
+/* ===== AMENITIES ===== */
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--ink);
+  border-bottom: 1px solid rgba(232,227,219,0.6);
+}
+.amenity-item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ===== THE BEDROOM (Blueground-style) ===== */
+.bedroom-section-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--warm);
+  overflow: hidden;
+}
+.bedroom-section-img {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+.bedroom-section-img-placeholder {
+  width: 100%;
+  min-height: 220px;
+  background: linear-gradient(145deg, #d4ccc0 0%, #b8a898 30%, #a89080 60%, #c4b8a8 100%);
+}
+.bedroom-section-info {
+  padding: clamp(24px, 3vw, 40px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--cream);
+}
+.bedroom-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.bedroom-section-name {
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+.bedroom-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--warm);
+}
+.bedroom-detail-row:last-child {
+  border-bottom: 1px solid var(--warm);
+}
+.bedroom-detail-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.bedroom-detail-label {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--muted);
+  min-width: 70px;
+}
+.bedroom-detail-value {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-left: auto;
+}
+
+/* ===== LOCATION ===== */
+.location-address {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.location-description {
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.8;
+  color: rgba(26,26,24,0.65);
+  margin-bottom: 28px;
+}
+.location-transit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.location-transit-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--cream);
+  border: 1px solid var(--warm);
+}
+.transit-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+.transit-details {
+  flex: 1;
+  min-width: 0;
+}
+.transit-station {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.transit-lines {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.transit-walk {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.location-map {
+  width: 100%;
+  height: 280px;
+  border: 1px solid var(--warm);
+  overflow: hidden;
+}
+.location-map iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ===== YOUR STAY WITH HIVE ===== */
+.stay-intro {
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+.stay-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(20px, 3vw, 32px);
+}
+.stay-col h3 {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+.stay-col p {
+  font-size: 0.84rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* ===== CTA BAND ===== */
+.cta-band {
+  padding: 28px 0;
+  background: var(--ink);
+}
+.cta-band .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.cta-band-text {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.cta-band h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cta-band h2 em { font-style: italic; color: var(--accent); }
+.cta-band p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+}
+.cta-band .btn-primary {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.cta-band .btn-primary svg { transition: transform 0.3s; }
+
+/* ===== VIDEO ===== */
+.video-embed {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+}
+.video-embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ===== SIDEBAR ===== */
+.detail-sidebar {
+  position: relative;
+}
+.inquiry-card {
+  position: sticky;
+  top: 100px;
+  background: var(--white);
+  border: 1px solid var(--warm);
+  padding: clamp(24px, 3vw, 36px);
+}
+.inquiry-price {
+  margin-bottom: 20px;
+}
+.inquiry-price .price-large {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 400;
+}
+.inquiry-price .price-suffix {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.inquiry-status {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.badge-available {
+  background: rgba(34,197,94,0.1);
+  color: #16a34a;
+}
+.badge-just-listed {
+  background: var(--accent);
+  color: var(--ink);
+}
+.badge-soon {
+  background: rgba(234,179,8,0.1);
+  color: #a16207;
+}
+.inquiry-dates-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+  max-width: 100%;
+}
+.inquiry-date-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.inquiry-date-field label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.inquiry-date-field input {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 12px;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink);
+  border: 1px solid var(--warm);
+  background: var(--cream);
+  cursor: pointer;
+  transition: border-color 0.3s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.inquiry-date-field input:focus {
+  outline: none;
+  border-color: var(--accent-dark);
+}
+/* Flatpickr custom theme */
+.flatpickr-calendar {
+  font-family: var(--sans) !important;
+  border: 1px solid var(--warm) !important;
+  box-shadow: 0 8px 32px rgba(26,26,24,0.12) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+.flatpickr-months {
+  background: var(--ink) !important;
+  padding: 4px 0 !important;
+}
+.flatpickr-months .flatpickr-month {
+  color: var(--white) !important;
+  fill: var(--white) !important;
+  height: 36px !important;
+}
+.flatpickr-current-month {
+  font-family: var(--serif) !important;
+  font-size: 1.05rem !important;
+  font-weight: 500 !important;
+  color: var(--white) !important;
+}
+.flatpickr-current-month .numInputWrapper span { display: none; }
+.flatpickr-current-month input.cur-year {
+  color: var(--white) !important;
+  font-family: var(--serif) !important;
+  font-weight: 500 !important;
+}
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  fill: var(--white) !important;
+  color: var(--white) !important;
+}
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+  fill: var(--accent) !important;
+}
+span.flatpickr-weekday {
+  font-family: var(--sans) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: var(--muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+.flatpickr-day {
+  font-family: var(--sans) !important;
+  font-size: 0.8rem !important;
+  color: var(--ink) !important;
+  border-radius: 4px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+}
+.flatpickr-day:hover {
+  background: var(--cream) !important;
+  border-color: var(--warm) !important;
+}
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+  color: var(--white) !important;
+}
+.flatpickr-day.today {
+  border-color: var(--accent-dark) !important;
+}
+.flatpickr-day.today:hover {
+  background: var(--accent) !important;
+  color: var(--ink) !important;
+}
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+  background: #eceae5 !important;
+  color: #b5b0a6 !important;
+  text-decoration: line-through !important;
+  cursor: not-allowed !important;
+  border-color: transparent !important;
+}
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  color: #c4c0b8 !important;
+}
+.inquiry-price-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--warm);
+  border-bottom: 1px solid var(--warm);
+  margin-bottom: 20px;
+}
+.inquiry-price-label {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.inquiry-price-value {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.inquiry-minstay {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--stone);
+  margin-bottom: 20px;
+}
+.inquiry-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: var(--ink);
+  color: var(--white);
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-bottom: 10px;
+}
+.inquiry-btn-tour {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 16px;
+}
+.inquiry-note {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--stone);
+  text-align: center;
+}
+
+/* Booked dates */
+.inquiry-availability {
+  margin-bottom: 20px;
+}
+.inquiry-availability-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.booked-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--warm);
+}
+.booked-range:last-child {
+  border-bottom: none;
+}
+.booked-range-dates {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.booked-range-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--stone);
+  padding: 3px 8px;
+  background: var(--cream);
+}
+.date-conflict-banner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: var(--cream);
+  border-left: 2px solid var(--stone);
+}
+.date-conflict-banner.show {
+  display: flex;
+}
+.date-conflict-banner svg {
+  width: 14px;
+  height: 14px;
+  color: var(--stone);
+  flex-shrink: 0;
+}
+.date-conflict-banner span {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.inquiry-date-field input.date-conflict {
+  border-color: var(--stone);
+}
+
+/* ===== RELATED ===== */
+.related-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--cream);
+  border-top: 1px solid var(--warm);
+}
+.related-section .detail-section-title {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.related-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s;
+}
+.related-card:hover { transform: translateY(-4px); }
+.related-card-img {
+  height: 220px;
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 16px;
+}
+.related-card-img-placeholder {
+  height: 220px;
+  background: linear-gradient(145deg, #d4ccc0 0%, #b8a898 30%, #a89080 60%, #c4b8a8 100%);
+  margin-bottom: 16px;
+}
+.related-card h3 {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+.related-card-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.related-card-price {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  background: var(--ink);
+  padding: clamp(48px, 6vw, 80px) 0 clamp(24px, 3vw, 40px);
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: clamp(32px, 4vw, 64px);
+  padding-bottom: clamp(32px, 4vw, 48px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.footer-brand .nav-logo {
+  display: flex;
+  margin-bottom: 20px;
+}
+.footer-brand .nav-logo .logo-name { color: #fefdfb; }
+.footer-brand .nav-logo .logo-tag { color: #fefdfb; }
+.footer-brand p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.35);
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+
+.footer-col h4 {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 24px;
+}
+.footer-col a {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.35);
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.3s;
+}
+.footer-col a:hover { color: var(--accent); }
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 32px;
+}
+.footer-bottom p {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.2);
+}
+.footer-bottom a {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.2);
+  text-decoration: none;
+}
+.footer-bottom a:hover { color: var(--accent); }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .gallery-grid { height: clamp(280px, 34vw, 380px); }
+  .detail-main { grid-template-columns: 1fr 320px; }
+  .amenities-grid { grid-template-columns: repeat(2, 1fr); }
+  .stay-grid { grid-template-columns: repeat(2, 1fr); }
+  .related-grid { grid-template-columns: repeat(2, 1fr); }
+  .footer-top { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(254,253,251,0.98);
+    flex-direction: column;
+    padding: 24px 16px;
+    gap: 20px;
+    border-bottom: 1px solid var(--warm);
+    z-index: 99;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { color: var(--ink) !important; }
+  .nav-cta {
+    border: 1px solid var(--ink) !important;
+    color: var(--ink) !important;
+    text-align: center;
+  }
+  .nav-login {
+    background: var(--accent) !important;
+    color: var(--ink) !important;
+    text-align: center;
+  }
+  .nav-mobile { display: block; }
+  .listing-hero { padding-top: 80px; }
+  .listing-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0 8px;
+  }
+  .listing-header-right {
+    text-align: left;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .gallery-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+  .gallery-main { min-height: 220px; grid-row: auto; grid-column: auto; }
+  .gallery-thumb { min-height: 80px; display: none; }
+  .gallery-more { display: none; }
+  .hero-stats { gap: 10px; }
+  .hero-stat-divider { display: none; }
+  .back-link { font-size: 0.75rem; padding-top: 8px; margin-left: -4px; }
+  .container { padding: 0 20px; }
+  .detail-main {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .detail-sidebar {
+    order: -1;
+    margin-bottom: 32px;
+    width: 100%;
+  }
+  .inquiry-card {
+    position: relative;
+    top: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .inquiry-dates-row {
+    gap: 8px;
+  }
+  .inquiry-date-field input {
+    padding: 10px 6px;
+    font-size: 0.78rem;
+    box-sizing: border-box;
+  }
+  .bedroom-section-card { grid-template-columns: 1fr; }
+  .bedroom-section-img, .bedroom-section-img-placeholder { min-height: 180px; }
+  .related-grid { grid-template-columns: 1fr; }
+  .amenities-grid { grid-template-columns: 1fr; }
+  .stay-grid { grid-template-columns: 1fr; }
+  .footer-top { grid-template-columns: 1fr; }
+  .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+  .floorplan-img { max-width: 95vw; max-height: 80vh; }
+  .floorplan-zoom-controls { right: 12px; }
+  .floorplan-close { right: 12px; top: 12px; }
+  .cta-band { padding: 24px 0; }
+  .cta-band .container { flex-direction: column; text-align: center; gap: 16px; }
+  .cta-band-text { flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="container">
+    <a href="/" class="nav-logo">
+              <svg width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+    <div class="nav-links">
+      <a href="/properties">Properties</a>
+      <a href="/partners">For Landlords</a>
+      <a href="/#about">About</a>
+      <a href="/partners/apply" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-mobile" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO: Header on top, full-width gallery below -->
+<section class="listing-hero">
+  <div class="container">
+    <a href="/properties" class="back-link">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.3"/></svg>
+      Back to all properties
+    </a>
+    <% if (listing.highlights) { %>
+    <div class="listing-highlights"><%= listing.highlights %></div>
+    <% } %>
+    <div class="listing-header-row">
+      <div class="listing-header-left">
+        <h1><%= listing.title %></h1>
+        <p class="listing-location"><%= listing.neighborhood %>, <%= listing.city %>, <%= listing.state %></p>
+        <div class="hero-stats" style="margin-top: 12px;">
+          <div class="hero-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21V7l9-4 9 4v14"/><path d="M9 21V11h6v10"/></svg>
+            <span><%= listing.bedrooms === 0 ? 'Studio' : listing.bedrooms + ' Bed' %></span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z"/><path d="M4 12V7a4 4 0 014-4h0a4 4 0 014 4v5"/><path d="M6 19v2m12-2v2"/></svg>
+            <span><%= listing.bathrooms %> Bath</span>
+          </div>
+          <% if (listing.sqft) { %>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18"/></svg>
+            <span><%= listing.sqft.toLocaleString() %> sqft</span>
+          </div>
+          <% } %>
+          <% if (listing.floor) { %>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M5 21V9l7-6 7 6v12"/><path d="M9 21v-6h6v6"/></svg>
+            <span>Unit <%= listing.floor %></span>
+          </div>
+          <% } %>
+          <% if (listing.bed_type) { %>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 17V9a2 2 0 012-2h16a2 2 0 012 2v8"/><path d="M2 13h20"/><path d="M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/><path d="M2 17h20v2H2z"/></svg>
+            <span><%= listing.bed_type %></span>
+          </div>
+          <% } %>
+        </div>
+      </div>
+      <div class="listing-header-right">
+        <div class="price-row">
+          <span class="price-amount">$<%= listing.price_monthly.toLocaleString() %></span>
+          <span class="price-period">/month</span>
+        </div>
+        <button class="hero-cta-share" onclick="shareListing()" aria-label="Share listing">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Full-width gallery grid -->
+  <div class="container">
+    <div class="gallery-grid">
+      <% if (listing.images && listing.images.length > 0) { %>
+        <div class="gallery-main" style="background-image: url('<%= listing.images[0] %>');" onclick="openGallery(0)">
+          <div class="gallery-actions">
+            <button class="gallery-action-btn" onclick="event.stopPropagation(); openGallery(0)">
+              <%= listing.images.length %> photos
+            </button>
+            <% if (listing.floor_plan_image) { %>
+            <button class="gallery-action-btn" onclick="event.stopPropagation(); openFloorPlan()">
+              Floor plan
+            </button>
+            <% } %>
+          </div>
+        </div>
+        <% if (listing.images.length > 1) { %>
+          <% listing.images.slice(1, 5).forEach(function(img, i) { %>
+          <div class="gallery-thumb" style="background-image: url('<%= img %>');" onclick="openGallery(<%= i + 1 %>)"></div>
+          <% }); %>
+          <% var thumbCount = Math.min(listing.images.length - 1, 4); %>
+          <% for (var p = thumbCount; p < 4; p++) { %>
+          <div class="gallery-thumb" style="background: var(--warm);"></div>
+          <% } %>
+        <% } %>
+      <% } else { %>
+        <div class="gallery-main gallery-placeholder"></div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+  <div class="detail-main">
+
+    <!-- LEFT COLUMN -->
+    <div class="detail-content">
+
+      <!-- Description -->
+      <% if (listing.description) { %>
+      <div class="detail-section reveal">
+        <h2 class="detail-section-title">About This Home</h2>
+        <div class="detail-description">
+          <%- (listing.description || '').replace(/\n/g, '<br>') %>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Amenities -->
+      <% var allAmenities = [].concat(listing.amenities || []).concat(listing.building_amenities || []); %>
+      <% if (allAmenities.length > 0) { %>
+      <div class="detail-section reveal">
+        <h2 class="detail-section-title">Amenities</h2>
+        <div class="amenities-grid">
+          <% allAmenities.forEach(function(a) { %>
+          <div class="amenity-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l4 4L21 6"/></svg>
+            <%= a %>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- Location -->
+      <div class="detail-section reveal">
+        <h2 class="detail-section-title">Location</h2>
+        <% if (listing.address) { %>
+        <p class="location-address"><%= listing.address %></p>
+        <% } else { %>
+        <p class="location-address"><%= listing.neighborhood %>, <%= listing.city %>, <%= listing.state %></p>
+        <% } %>
+        <p class="location-description"><%= listing.location_description ? listing.location_description : 'Located in the heart of ' + listing.neighborhood + ', this home puts you steps from the best dining, shopping, and nightlife ' + listing.city + ' has to offer.' %></p>
+
+        <% if (listing.transit) { %>
+        <div class="location-transit-list">
+          <% var transitLines = (listing.transit || '').split(/[,\n]/).map(function(s) { return s.trim(); }).filter(Boolean); %>
+          <% transitLines.forEach(function(line) { %>
+          <div class="location-transit-item">
+            <div class="transit-icon" style="background: var(--ink);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M4 17V6a4 4 0 014-4h8a4 4 0 014 4v11"/><path d="M4 17h16"/><path d="M6 21l2-4m10 4l-2-4"/><circle cx="8" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="14" r="1" fill="currentColor"/><path d="M7 8h10"/></svg>
+            </div>
+            <div class="transit-details">
+              <div class="transit-station"><%= line %></div>
+            </div>
+          </div>
+          <% }); %>
+        </div>
+        <% } %>
+
+        <div class="location-map">
+          <iframe src="https://www.google.com/maps?q=<%= encodeURIComponent((listing.address || '') + ' ' + listing.neighborhood + ' ' + listing.city + ' ' + listing.state) %>&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+        </div>
+      </div>
+
+      <!-- Your Stay with Hive -->
+      <div class="detail-section reveal">
+        <h2 class="detail-section-title">Your Stay with Hive</h2>
+        <p class="stay-intro">Every Hive apartment comes fully furnished and move-in ready. No hidden fees, no broker costs — just walk in with your suitcase.</p>
+        <div class="stay-grid">
+          <div class="stay-col">
+            <h3>Fully Furnished</h3>
+            <p>Designer furniture, premium linens, and towels — everything curated so you feel at home from day one.</p>
+          </div>
+          <div class="stay-col">
+            <h3>All-Inclusive</h3>
+            <p>High-speed WiFi, utilities, and professional cleaning included in your monthly rent. No surprise bills.</p>
+          </div>
+          <div class="stay-col">
+            <h3>Equipped Kitchen</h3>
+            <p>Full kitchen with cookware, dishes, and appliances. Everything you need to cook and entertain.</p>
+          </div>
+          <div class="stay-col">
+            <h3>Flexible Terms</h3>
+            <p>One month to twelve — stay as long as you need with dedicated support whenever you need it.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="detail-sidebar">
+      <div class="inquiry-card">
+        <div class="inquiry-price">
+          <span class="price-large">$<%= listing.price_monthly.toLocaleString() %></span>
+          <span class="price-suffix">/month</span>
+        </div>
+        <% if (listing.show_booking !== false) { %>
+        <div class="inquiry-dates-row">
+          <div class="inquiry-date-field">
+            <label for="move-in">Move In</label>
+            <input type="date" id="move-in" value="<%= listing.available_from ? new Date(listing.available_from).toISOString().split('T')[0] : '' %>">
+          </div>
+          <div class="inquiry-date-field">
+            <label for="move-out">Move Out</label>
+            <input type="date" id="move-out" value="<%= listing.available_to ? new Date(listing.available_to).toISOString().split('T')[0] : '' %>">
+          </div>
+        </div>
+
+        <div class="date-conflict-banner" id="date-conflict-banner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>These dates overlap with a booking. Try adjusting your move-in or move-out date.</span>
+        </div>
+
+        <% if (bookings && bookings.length > 0) { %>
+        <div class="inquiry-availability">
+          <div class="inquiry-availability-label">Unavailable</div>
+          <% bookings.forEach(function(b) { %>
+          <div class="booked-range">
+            <span class="booked-range-dates"><%= new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %> &mdash; <%= new Date(b.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></span>
+            <span class="booked-range-tag">Booked</span>
+          </div>
+          <% }); %>
+        </div>
+        <% } %>
+
+        <div class="inquiry-price-summary">
+          <span class="inquiry-price-label">Monthly rent</span>
+          <span class="inquiry-price-value">$<%= listing.price_monthly.toLocaleString() %></span>
+        </div>
+
+        <% if (listing.min_stay) { %>
+        <p class="inquiry-minstay">Minimum stay: <%= listing.min_stay %> days</p>
+        <% } %>
+        <a href="/apply" class="inquiry-btn">Book Now</a>
+        <a href="/apply" class="inquiry-btn-tour">Schedule a Tour</a>
+        <p class="inquiry-note">No broker fees &middot; Fully furnished &middot; Flexible terms</p>
+        <% } %>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- RELATED LISTINGS -->
+<% if (relatedListings && relatedListings.length > 0) { %>
+<section class="related-section">
+  <div class="container">
+    <h2 class="detail-section-title">Similar Homes Nearby</h2>
+    <div class="related-grid">
+      <% relatedListings.forEach(function(r) { %>
+      <a href="/properties/<%= r.id %>" class="related-card">
+        <% if (r.images && r.images.length > 0) { %>
+        <div class="related-card-img" style="background-image: url('<%= r.images[0] %>');"></div>
+        <% } else { %>
+        <div class="related-card-img-placeholder"></div>
+        <% } %>
+        <h3><%= r.title %></h3>
+        <p class="related-card-meta"><%= r.neighborhood %>, <%= r.city %> &middot; <%= r.bedrooms === 0 ? 'Studio' : r.bedrooms + ' Bed' %></p>
+        <p class="related-card-price">$<%= r.price_monthly.toLocaleString() %><span style="color: var(--muted); font-weight: 400;">/mo</span></p>
+      </a>
+      <% }); %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo">
+              <svg width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+        <p>Move-in ready, fully furnished with flexible lease terms. No broker fees, no guarantors required, no hidden fees.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Residences</h4>
+        <a href="#">New York</a>
+        <a href="#">Los Angeles</a>
+        <a href="#">Chicago</a>
+        <a href="#">Miami</a>
+        <a href="/properties">All Properties</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#about">About Us</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="/partners/apply">Contact Us</a>
+        <a href="#">FAQ</a>
+        <a href="/partners">Partner With Us</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Privacy Policy</a>
+        <a href="/admin/login">Admin Login</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Hive. All rights reserved.</p>
+      <a href="#">hello@hiveny.com</a>
+    </div>
+  </div>
+</footer>
+
+<!-- SHARE TOAST -->
+<div class="share-toast" id="share-toast">Link copied to clipboard</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <button class="lightbox-arrow lightbox-prev" onclick="prevSlide()">&#8249;</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="Gallery image">
+  <button class="lightbox-arrow lightbox-next" onclick="nextSlide()">&#8250;</button>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
+</div>
+
+<!-- FLOOR PLAN MODAL -->
+<div class="floorplan-modal" id="floorplan-modal">
+  <button class="floorplan-close" onclick="closeFloorPlan()">&times;</button>
+  <div class="floorplan-modal-inner">
+    <% if (listing.floor_plan_image) { %>
+    <div class="floorplan-img-wrapper" id="floorplan-wrapper">
+      <img class="floorplan-img" id="floorplan-img" src="<%= listing.floor_plan_image %>" alt="Floor plan for <%= listing.title %>" draggable="false">
+    </div>
+    <div class="floorplan-zoom-controls">
+      <button class="floorplan-zoom-btn" onclick="zoomFloorPlan(1)" aria-label="Zoom in">+</button>
+      <button class="floorplan-zoom-btn" onclick="zoomFloorPlan(-1)" aria-label="Zoom out">&minus;</button>
+    </div>
+    <div class="floorplan-label">Floor Plan</div>
+    <% } else { %>
+    <div class="floorplan-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18M15 9v12"/><path d="M3 15h6"/></svg>
+      <p>Floor plan coming soon</p>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+// Gallery lightbox
+var images = <%- JSON.stringify(listing.images || []) %>;
+var currentSlide = 0;
+var lightbox = document.getElementById('lightbox');
+var lightboxImg = document.getElementById('lightbox-img');
+var lightboxCounter = document.getElementById('lightbox-counter');
+
+function openGallery(index) {
+  currentSlide = index;
+  lightboxImg.src = images[currentSlide];
+  lightboxCounter.textContent = (currentSlide + 1) + ' / ' + images.length;
+  lightbox.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function nextSlide() {
+  currentSlide = (currentSlide + 1) % images.length;
+  lightboxImg.src = images[currentSlide];
+  lightboxCounter.textContent = (currentSlide + 1) + ' / ' + images.length;
+}
+
+function prevSlide() {
+  currentSlide = (currentSlide - 1 + images.length) % images.length;
+  lightboxImg.src = images[currentSlide];
+  lightboxCounter.textContent = (currentSlide + 1) + ' / ' + images.length;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!lightbox.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowRight') nextSlide();
+  if (e.key === 'ArrowLeft') prevSlide();
+});
+
+lightbox.addEventListener('click', function(e) {
+  if (e.target === lightbox) closeLightbox();
+});
+
+// Floor plan modal
+var floorplanModal = document.getElementById('floorplan-modal');
+var floorplanZoom = 1;
+var floorplanMinZoom = 0.5;
+var floorplanMaxZoom = 3;
+
+function openFloorPlan() {
+  floorplanZoom = 1;
+  var img = document.getElementById('floorplan-img');
+  if (img) img.style.transform = 'scale(1)';
+  floorplanModal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFloorPlan() {
+  floorplanModal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function zoomFloorPlan(direction) {
+  var img = document.getElementById('floorplan-img');
+  if (!img) return;
+  floorplanZoom += direction * 0.25;
+  if (floorplanZoom < floorplanMinZoom) floorplanZoom = floorplanMinZoom;
+  if (floorplanZoom > floorplanMaxZoom) floorplanZoom = floorplanMaxZoom;
+  img.style.transform = 'scale(' + floorplanZoom + ')';
+}
+
+// Close floor plan on Escape or background click
+document.addEventListener('keydown', function(e) {
+  if (!floorplanModal.classList.contains('open')) return;
+  if (e.key === 'Escape') closeFloorPlan();
+});
+floorplanModal.addEventListener('click', function(e) {
+  if (e.target === floorplanModal || e.target.classList.contains('floorplan-modal-inner')) closeFloorPlan();
+});
+
+// Share listing
+function shareListing() {
+  var url = window.location.href;
+  var title = '<%= listing.title %> — Hive';
+  // Try native share (mobile)
+  if (navigator.share) {
+    navigator.share({ title: title, url: url }).catch(function() {});
+  } else {
+    // Fallback: copy to clipboard
+    navigator.clipboard.writeText(url).then(function() {
+      var toast = document.getElementById('share-toast');
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2500);
+    }).catch(function() {
+      // Double fallback for older browsers
+      var input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      var toast = document.getElementById('share-toast');
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2500);
+    });
+  }
+}
+
+// Reveal on scroll
+var reveals = document.querySelectorAll('.reveal');
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+reveals.forEach(function(el) { observer.observe(el); });
+requestAnimationFrame(function() {
+  reveals.forEach(function(el) {
+    var rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight) {
+      el.classList.add('visible');
+    }
+  });
+});
+
+// Mobile nav
+var mobileBtn = document.querySelector('.nav-mobile');
+var navLinks = document.querySelector('.nav-links');
+if (mobileBtn) {
+  mobileBtn.addEventListener('click', function() {
+    navLinks.classList.toggle('open');
+  });
+}
+
+// Booked date validation + Flatpickr calendar
+var bookedRanges = <%- JSON.stringify((bookings || []).map(function(b) { return { check_in: b.check_in, check_out: b.check_out }; })) %>;
+var moveInInput = document.getElementById('move-in');
+var moveOutInput = document.getElementById('move-out');
+var conflictBanner = document.getElementById('date-conflict-banner');
+
+function parseDate(str) {
+  if (!str) return null;
+  var parts = str.split('T')[0].split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
+function datesOverlap(startA, endA, startB, endB) {
+  return startA < endB && endA > startB;
+}
+
+function checkDateConflict() {
+  if (!moveInInput || !moveOutInput || !conflictBanner) return;
+  var moveIn = moveInInput.value ? parseDate(moveInInput.value) : null;
+  var moveOut = moveOutInput.value ? parseDate(moveOutInput.value) : null;
+  if (!moveIn || !moveOut || bookedRanges.length === 0) {
+    conflictBanner.classList.remove('show');
+    moveInInput.classList.remove('date-conflict');
+    moveOutInput.classList.remove('date-conflict');
+    return;
+  }
+  var hasConflict = false;
+  for (var i = 0; i < bookedRanges.length; i++) {
+    var bStart = parseDate(bookedRanges[i].check_in);
+    var bEnd = parseDate(bookedRanges[i].check_out);
+    if (datesOverlap(moveIn, moveOut, bStart, bEnd)) {
+      hasConflict = true;
+      break;
+    }
+  }
+  if (hasConflict) {
+    conflictBanner.classList.add('show');
+    moveInInput.classList.add('date-conflict');
+    moveOutInput.classList.add('date-conflict');
+  } else {
+    conflictBanner.classList.remove('show');
+    moveInInput.classList.remove('date-conflict');
+    moveOutInput.classList.remove('date-conflict');
+  }
+}
+
+// Build disabled date ranges for flatpickr
+var disabledRanges = [];
+bookedRanges.forEach(function(b) {
+  var from = b.check_in ? b.check_in.split('T')[0] : null;
+  var to = b.check_out ? b.check_out.split('T')[0] : null;
+  if (from && to) {
+    disabledRanges.push({ from: from, to: to });
+  }
+});
+
+// Initialize flatpickr on date inputs
+if (moveInInput && typeof flatpickr !== 'undefined') {
+  flatpickr(moveInInput, {
+    dateFormat: 'Y-m-d',
+    disable: disabledRanges,
+    minDate: 'today',
+    defaultDate: moveInInput.value || null,
+    onChange: function() { checkDateConflict(); }
+  });
+}
+if (moveOutInput && typeof flatpickr !== 'undefined') {
+  flatpickr(moveOutInput, {
+    dateFormat: 'Y-m-d',
+    disable: disabledRanges,
+    minDate: 'today',
+    defaultDate: moveOutInput.value || null,
+    onChange: function() { checkDateConflict(); }
+  });
+}
+
+if (moveInInput && moveOutInput) {
+  checkDateConflict();
+}
+</script>
+</body>
+</html>

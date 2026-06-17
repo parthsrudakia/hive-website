@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Admin - Landlord Inquiries</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a18;
+      --cream: #f5f2ed;
+      --accent: #d4920b;
+      --accent-dark: #b87d09;
+      --white: #fefdfb;
+      --muted: #8a8378;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background-color: var(--cream); color: var(--ink); min-height: 100vh; }
+
+    .admin-nav { background: var(--ink); color: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; }
+    .admin-nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--white); text-decoration: none; letter-spacing: 1px; }
+    .admin-nav-brand span { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-left: 10px; }
+    .admin-nav-right { display: flex; align-items: center; gap: 20px; font-size: 14px; }
+    .admin-nav-right .admin-greeting { color: #b0ada6; }
+    .admin-nav-right a { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; }
+    .admin-nav-right a:hover { color: var(--accent-dark); }
+
+    .admin-tabs { display: flex; gap: 0; background: var(--white); border-bottom: 1px solid #e0ddd7; padding: 0 32px; }
+    .admin-tab { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .admin-tab:hover { color: var(--ink); }
+    .admin-tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+
+    .admin-content { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .admin-header h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; }
+    .admin-header .count { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 12px; }
+
+    .table-wrapper { background: var(--white); border: 1px solid #e0ddd7; border-radius: 8px; overflow-x: auto; box-shadow: 0 1px 4px rgba(26,26,24,0.04); }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .data-table thead { background: #f8f6f2; }
+    .data-table th { padding: 12px 16px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid #e0ddd7; white-space: nowrap; }
+    .data-table td { padding: 14px 16px; border-bottom: 1px solid #eceae5; vertical-align: top; }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover { background: #faf9f6; }
+
+    .inq-name { font-weight: 600; }
+    .inq-email { color: var(--muted); font-size: 13px; }
+    .inq-detail { font-size: 13px; color: #555; }
+    .inq-message { max-width: 280px; font-size: 13px; line-height: 1.5; color: #555; }
+    .inq-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .inq-type { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: capitalize; background: #f3f4f6; color: #6b7280; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .empty-state p { font-size: 15px; }
+
+    .btn-delete { display: inline-block; padding: 5px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #b91c1c; background: #fef2f2; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+    .btn-delete:hover { background: #fecaca; }
+    .delete-form { display: inline; margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <nav class="admin-nav">
+    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
+    <div class="admin-nav-right">
+      <span class="admin-greeting">Hello, <%= adminName %></span>
+      <a href="/admin/logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="admin-tabs">
+    <a href="/admin/dashboard" class="admin-tab">Listings</a>
+    <a href="/admin/bookings" class="admin-tab">Bookings</a>
+    <a href="/admin/applications" class="admin-tab">Applications</a>
+    <a href="/admin/landlord-inquiries" class="admin-tab active">Landlord Inquiries</a>
+  </div>
+
+  <main class="admin-content">
+    <div class="admin-header">
+      <h2>Landlord Inquiries <span class="count">(<%= inquiries.length %>)</span></h2>
+    </div>
+
+    <% if (inquiries.length === 0) { %>
+      <div class="table-wrapper">
+        <div class="empty-state">
+          <p>No landlord inquiries yet.</p>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Property</th>
+              <th>Message</th>
+              <th>Referral</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% inquiries.forEach(function(inq) { %>
+            <tr>
+              <td class="inq-name"><%= inq.full_name %></td>
+              <td>
+                <div><%= inq.email %></div>
+                <% if (inq.phone) { %><div class="inq-email"><%= inq.phone %></div><% } %>
+              </td>
+              <td>
+                <div class="inq-detail"><%= inq.property_location || '—' %></div>
+                <% if (inq.property_type) { %><span class="inq-type"><%= inq.property_type.replace('_', ' ') %></span><% } %>
+                <% if (inq.num_units) { %><div class="inq-email"><%= inq.num_units %> unit<%= inq.num_units === '1' ? '' : 's' %></div><% } %>
+              </td>
+              <td class="inq-message"><%= inq.message || '—' %></td>
+              <td class="inq-detail"><%= inq.referral_source || '—' %></td>
+              <td class="inq-date"><%= new Date(inq.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+              <td>
+                <form class="delete-form" action="/admin/landlord-inquiries/<%= inq.id %>/delete" method="POST" onsubmit="return confirm('Delete this inquiry?')">
+                  <button type="submit" class="btn-delete">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

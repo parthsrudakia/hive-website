@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hive — City Living, Made Simple</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #1a1a18;
+  --cream: #f5f2ed;
+  --warm: #e8e3db;
+  --stone: #c4bdb3;
+  --muted: #8a8378;
+  --accent: #d4920b;
+  --accent-dark: #b87d09;
+  --accent-text: #9a6f08;
+  --white: #fefdfb;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--white);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ===== UTILITY ===== */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 clamp(24px, 5vw, 80px); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* ===== NAV ===== */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 20px 0;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav.scrolled { top: 0; }
+.nav.scrolled {
+  background: rgba(254,253,251,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(230,210,0,0.1);
+  padding: 14px 0;
+}
+.nav .container {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: color 0.4s;
+}
+.nav-logo svg { flex-shrink: 0; }
+.nav-logo .logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.nav-logo .logo-name {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--white);
+  transition: color 0.4s;
+}
+.nav.scrolled .nav-logo .logo-name { color: var(--ink); }
+.nav-logo .logo-tag {
+  font-family: var(--sans);
+  font-size: 0.48rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  color: var(--white);
+  opacity: 0.5;
+  transition: color 0.4s;
+}
+.nav.scrolled .nav-logo .logo-tag { color: var(--ink); }
+/* SVG fill transitions */
+.nav-logo .nav-icon-light { display: none; }
+.nav-logo .nav-icon-dark { display: block; }
+.nav.scrolled .nav-logo .nav-icon-light { display: block; }
+.nav.scrolled .nav-logo .nav-icon-dark { display: none; }
+/* Yellow accent strip at top */
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 101;
+  background: var(--accent);
+  padding: 8px 0;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.top-bar.hidden {
+  transform: translateY(-100%);
+}
+.top-bar a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nav-links { display: flex; gap: 36px; align-items: center; }
+.nav-links a {
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.nav.scrolled .nav-links a { color: var(--muted); }
+.nav-links a:hover { color: var(--accent-text); }
+.nav-cta {
+  font-size: 0.78rem !important;
+  padding: 10px 24px;
+  border: 1px solid rgba(255,255,255,0.4) !important;
+  color: var(--white) !important;
+  transition: all 0.3s !important;
+}
+.nav.scrolled .nav-cta {
+  border-color: var(--accent-text) !important;
+  color: var(--accent-text) !important;
+}
+.nav-cta:hover {}
+.nav-login {
+  font-size: 0.78rem !important;
+  padding: 10px 24px;
+  background: var(--accent) !important;
+  color: var(--ink) !important;
+  transition: all 0.3s !important;
+}
+.nav-login:hover {}
+.nav-mobile { display: none; background: none; border: none; cursor: pointer; }
+.nav-mobile span {
+  display: block; width: 24px; height: 1.5px; background: var(--white);
+  margin: 6px 0; transition: all 0.3s;
+}
+.nav.scrolled .nav-mobile span { background: var(--ink); }
+
+/* ===== HERO ===== */
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 700px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: clamp(60px, 10vh, 120px);
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #2a2520 0%, #1a1a18 50%);
+}
+.hero .container { position: relative; z-index: 2; width: 100%; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.3s forwards;
+}
+.hero-tag::before {
+  content: '';
+  width: 40px; height: 1px;
+  background: var(--accent);
+}
+.hero h1 {
+  font-family: var(--serif);
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  font-weight: 300;
+  line-height: 1.08;
+  color: var(--white);
+  max-width: 800px;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.5s forwards;
+}
+.hero h1 em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--accent);
+}
+.hero-sub {
+  font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.65);
+  max-width: 520px;
+  margin-bottom: 44px;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.7s forwards;
+}
+.hero-actions {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  opacity: 0;
+  animation: fadeUp 0.8s 0.9s forwards;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 36px;
+  background: var(--accent);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-primary:hover {}
+.btn-primary svg { transition: transform 0.3s; }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 36px;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 0.4s;
+}
+.btn-outline:hover {}
+
+/* Side stats */
+.hero-stats {
+  position: absolute;
+  right: clamp(24px, 5vw, 80px);
+  bottom: clamp(60px, 10vh, 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.1s forwards;
+}
+.hero-stat {
+  text-align: right;
+}
+.hero-stat-num {
+  font-family: var(--serif);
+  font-size: 2.4rem;
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin-top: 10px;
+}
+
+/* ===== MARQUEE ===== */
+.marquee-section {
+  padding: 22px 0;
+  background: var(--ink);
+  overflow: hidden;
+}
+.marquee-track {
+  display: flex;
+  animation: marquee 45s linear infinite;
+  width: max-content;
+}
+.marquee-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 28px;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.35);
+  white-space: nowrap;
+}
+.marquee-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.marquee-avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.marquee-item::after {
+  content: '\2726';
+  font-size: 0.5rem;
+  color: var(--accent);
+  opacity: 0.6;
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ===== FEATURED PREVIEW ===== */
+.featured-preview {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--cream);
+}
+.fp-title {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 300;
+  text-align: center;
+  margin-bottom: 32px;
+}
+.fp-city-links {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: clamp(32px, 4vw, 48px);
+  flex-wrap: wrap;
+}
+.fp-city-link {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: nowrap;
+}
+.fp-city-link:hover { color: var(--ink); }
+.fp-city-link.active {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+.fp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+.fp-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: clamp(48px, 6vw, 80px) 24px;
+  color: var(--muted);
+}
+.fp-empty-state p {
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: 300;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.fp-card {
+  background: var(--white);
+  border-radius: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+.fp-card-img {
+  position: relative;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+.fp-card-slides {
+  display: flex;
+  width: 100%; height: 100%;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fp-card-img-inner {
+  flex: 0 0 100%;
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+/* Desktop: second image on hover (crossfade) */
+@media (min-width: 769px) {
+  .fp-card-slides {
+    transition: none;
+  }
+  .fp-card-img-inner {
+    position: absolute;
+    top: 0; left: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .fp-card-img-inner:first-child {
+    position: relative;
+    opacity: 1;
+  }
+  .fp-card:hover .fp-card-img-inner:first-child {
+    opacity: 0;
+  }
+  .fp-card:hover .fp-card-img-inner:nth-child(2) {
+    opacity: 1;
+  }
+}
+/* Dots: hidden by default (desktop), shown on mobile */
+.fp-slide-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 4px;
+  z-index: 3;
+}
+.fp-slide-dot {
+  width: 20px; height: 2.5px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.4);
+  transition: all 0.3s;
+}
+.fp-slide-dot.active {
+  background: var(--white);
+}
+@media (max-width: 768px) {
+  .fp-slide-dots { display: flex; }
+}
+.fp-card-badge {
+  position: absolute;
+  top: 12px; left: 12px;
+  padding: 5px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--white);
+  border-radius: 0;
+}
+.fp-card-badge.badge-just-listed {
+  background: var(--accent);
+  color: var(--ink);
+}
+.fp-card-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+}
+.fp-dot {
+  width: 6px; height: 6px;
+  border-radius: 0;
+  background: rgba(255,255,255,0.5);
+}
+.fp-dot.active { background: var(--white); }
+.fp-card-info {
+  padding: 18px 20px 22px;
+}
+.fp-card-info h3 {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.fp-card-details {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.fp-card-details svg {
+  vertical-align: middle;
+  margin-top: -1px;
+}
+.fp-cta {
+  text-align: center;
+  margin-top: clamp(32px, 4vw, 48px);
+}
+.fp-browse-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--accent);
+  border-radius: 0;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+.fp-browse-link:hover {
+  background: var(--accent);
+}
+
+/* ===== TESTIMONIAL BANNER ===== */
+.testimonial-banner {
+  padding: 28px 0;
+  background: var(--ink);
+}
+.testimonial-banner .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.tb-arrow {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.3s;
+}
+.tb-arrow:hover { opacity: 0.6; }
+.tb-arrow svg { width: 16px; height: 16px; }
+.tb-slide-area {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.tb-slide {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.tb-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.tb-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.tb-avatar svg {
+  width: 18px; height: 18px;
+  fill: rgba(255,255,255,0.4);
+}
+.tb-avatar img {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.tb-name {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--white);
+  white-space: nowrap;
+}
+.tb-stars {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.tb-stars svg {
+  width: 11px; height: 11px;
+  fill: var(--accent);
+}
+.tb-text {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(255,255,255,0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tb-link {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  transition: opacity 0.3s;
+}
+.tb-link:hover { opacity: 1; }
+@media (max-width: 768px) {
+  .testimonial-banner .container { gap: 12px; }
+  .tb-slide { flex-wrap: wrap; gap: 10px; }
+  .tb-text { white-space: normal; font-size: 0.85rem; }
+}
+
+/* ===== ABOUT BRIEF ===== */
+.about-brief {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--white);
+}
+.about-brief-inner {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: clamp(40px, 6vw, 100px);
+  align-items: start;
+}
+.about-brief-left {}
+.section-tag {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 24px;
+}
+.section-tag::before {
+  content: '';
+  width: 32px; height: 1px;
+  background: var(--accent-text);
+}
+.about-brief-left h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 32px;
+}
+.about-brief-left h2 em {
+  font-style: italic;
+  color: var(--accent-text);
+}
+.about-brief-right p {
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.about-brief-right p:first-child {
+  font-size: 1.15rem;
+  color: var(--ink);
+  font-weight: 400;
+}
+.divider-line {
+  width: 40px; height: 1px;
+  background: var(--accent);
+  margin: 36px 0;
+}
+.about-metrics {
+  display: flex; gap: 48px; margin-top: 40px;
+}
+.about-metric h4 {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-weight: 300;
+  color: var(--ink);
+  line-height: 1;
+}
+.about-metric p {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted) !important;
+  margin-top: 6px !important;
+}
+.about-pillars {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+}
+.about-pillar {
+  padding: 22px 0;
+  border-bottom: 1px solid rgba(196,189,179,0.3);
+}
+.about-pillar:first-child {
+  border-top: 1px solid rgba(196,189,179,0.3);
+}
+.about-pillar h4 {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.about-pillar p {
+  font-size: 0.9rem !important;
+  font-weight: 300 !important;
+  line-height: 1.7;
+  color: var(--muted) !important;
+  margin-bottom: 0 !important;
+}
+
+/* ===== WHY CHOOSE HIVE ===== */
+.why-choose-hive {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--ink);
+  position: relative;
+  overflow: hidden;
+}
+.why-choose-hive::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(230,210,0,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 70%, rgba(230,210,0,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.wch-header {
+  text-align: center;
+  margin-bottom: clamp(48px, 6vw, 72px);
+  position: relative;
+}
+.wch-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--white);
+}
+.wch-header h2 em { font-style: italic; color: var(--accent); }
+.wch-header p {
+  font-size: 1rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  max-width: 560px;
+  margin: 20px auto 0;
+  line-height: 1.7;
+}
+.wch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+}
+.wch-card {
+  padding: clamp(32px, 3vw, 48px);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+.wch-card:last-child { border-right: none; }
+.wch-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 2px;
+  background: var(--accent);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wch-card:hover::after { width: 60%; }
+.wch-card:hover { background: rgba(255,255,255,0.03); }
+.wch-num {
+  font-family: var(--serif);
+  font-size: 3rem;
+  font-weight: 300;
+  color: var(--accent);
+  opacity: 0.3;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.wch-card h3 {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: 16px;
+}
+.wch-card p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: rgba(255,255,255,0.5);
+}
+.wch-bottom {
+  margin-top: clamp(48px, 6vw, 72px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 48px;
+  position: relative;
+}
+.wch-bottom-stat {
+  text-align: center;
+}
+.wch-bottom-stat h4 {
+  font-family: var(--serif);
+  font-size: 2.4rem;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+.wch-bottom-stat p {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-top: 6px;
+}
+.wch-divider {
+  width: 1px; height: 40px;
+  background: rgba(255,255,255,0.1);
+}
+@media (max-width: 1024px) {
+  .wch-grid { grid-template-columns: repeat(2, 1fr); }
+  .wch-card { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .wch-card:nth-child(2) { border-right: none; }
+}
+@media (max-width: 768px) {
+  .wch-grid { grid-template-columns: 1fr; }
+  .wch-card { border-right: none; }
+  .wch-bottom { flex-wrap: wrap; gap: 32px; }
+  .wch-divider { display: none; }
+}
+
+/* ===== WHY CHOOSE US ===== */
+.why-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--cream);
+  position: relative;
+}
+.why-section::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 40%; height: 100%;
+  background: radial-gradient(ellipse at 100% 0%, rgba(230,210,0,0.05) 0%, transparent 60%);
+}
+.why-header {
+  text-align: center;
+  margin-bottom: clamp(48px, 6vw, 80px);
+  position: relative;
+}
+.why-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+}
+.why-header h2 em { font-style: italic; color: var(--accent-text); }
+.why-header p {
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--muted);
+  max-width: 540px;
+  margin: 20px auto 0;
+  line-height: 1.7;
+}
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--stone);
+  border: 1px solid var(--stone);
+  position: relative;
+}
+.why-card {
+  padding: clamp(28px, 3vw, 40px);
+  background: var(--white);
+}
+.why-card h3 {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.why-card p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* ===== PROPERTIES ===== */
+.properties-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--white);
+}
+.properties-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: clamp(40px, 5vw, 64px);
+}
+.properties-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+}
+.properties-header h2 em { font-style: italic; color: var(--accent-text); }
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.property-card {
+  position: relative;
+  cursor: pointer;
+  group: true;
+}
+.property-img {
+  position: relative;
+  aspect-ratio: 3/3.5;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.property-img-inner {
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.property-card:hover .property-img-inner {
+  transform: scale(1.05);
+}
+.property-img-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(26,26,24,0.4) 100%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.property-card:hover .property-img-overlay { opacity: 1; }
+.property-badge {
+  position: absolute;
+  top: 16px; left: 16px;
+  padding: 6px 14px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.badge-available {
+  background: var(--accent);
+  color: var(--ink);
+}
+.badge-just-listed {
+  background: var(--accent);
+  color: var(--ink);
+}
+.badge-soon {
+  background: var(--ink);
+  color: var(--white);
+}
+.property-price {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--white);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.4s;
+}
+.property-card:hover .property-price {
+  opacity: 1; transform: translateY(0);
+}
+.property-price span {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+}
+.property-info h3 {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+.property-meta {
+  display: flex; align-items: center; gap: 16px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.property-meta span {
+  display: flex; align-items: center; gap: 5px;
+}
+.property-meta .dot {
+  width: 3px; height: 3px;
+  border-radius: 0;
+  background: var(--stone);
+}
+
+/* Browse bar */
+.browse-bar {
+  margin-top: clamp(48px, 5vw, 72px);
+  padding: clamp(28px, 3vw, 44px);
+  background: var(--cream);
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+.browse-field {
+  flex: 1;
+}
+.browse-field label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.browse-field select,
+.browse-field input {
+  width: 100%;
+  padding: 14px 16px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--stone);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+.browse-field select:focus,
+.browse-field input:focus {
+  border-color: var(--accent);
+}
+.browse-field select {
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238a8378' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+}
+.browse-btn {
+  padding: 14px 40px;
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.browse-btn:hover {}
+
+/* ===== TESTIMONIALS ===== */
+.testimonials-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--white);
+  position: relative;
+  overflow: hidden;
+}
+.testimonials-section::before {
+  content: '\201C';
+  position: absolute;
+  top: -40px; right: 5%;
+  font-family: var(--serif);
+  font-size: 28rem;
+  font-weight: 300;
+  color: rgba(0,0,0,0.02);
+  line-height: 1;
+  pointer-events: none;
+}
+.testimonials-header {
+  margin-bottom: clamp(48px, 6vw, 80px);
+}
+.testimonials-header .section-tag { color: var(--accent-text); }
+.testimonials-header .section-tag::before { background: var(--accent-text); }
+.testimonials-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.testimonials-header h2 em { font-style: italic; color: var(--accent-text); }
+.testimonials-grid {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.testimonials-grid::-webkit-scrollbar { display: none; }
+.testimonial-card {
+  flex: 0 0 calc((100% - 40px) / 3);
+  min-width: 280px;
+  scroll-snap-align: start;
+  padding: clamp(28px, 3vw, 40px);
+  background: var(--cream);
+  border: 1px solid var(--warm);
+  transition: all 0.4s;
+}
+.testimonial-stars {
+  display: flex; gap: 3px;
+  margin-bottom: 24px;
+}
+.testimonial-stars svg { width: 14px; height: 14px; fill: var(--accent); }
+.testimonial-card blockquote {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-bottom: 28px;
+}
+.testimonial-author {
+  display: flex; align-items: center; gap: 14px;
+}
+.testimonial-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--warm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.testimonial-avatar svg {
+  width: 20px; height: 20px;
+  fill: var(--muted);
+}
+.testimonial-author-info h4 {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.testimonial-author-info p {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.carousel-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 36px;
+}
+.carousel-dot {
+  width: 40px; height: 3px;
+  border-radius: 2px;
+  background: var(--warm);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.carousel-dot.active {
+  background: var(--ink);
+}
+/* ===== PARTNERS / INVESTORS ===== */
+.partners-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--cream);
+  position: relative;
+}
+.partners-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 560px;
+}
+.partners-visual {
+  position: relative;
+  background: var(--ink);
+  overflow: hidden;
+}
+.partners-visual-inner {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(135deg, rgba(230,210,0,0.1) 0%, transparent 60%),
+    linear-gradient(225deg, rgba(26,26,24,0.95) 0%, rgba(26,26,24,0.8) 100%);
+}
+.partners-visual-content {
+  position: relative; z-index: 2;
+  padding: clamp(40px, 5vw, 72px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.pv-stat {
+  margin-bottom: 32px;
+}
+.pv-stat h3 {
+  font-family: var(--serif);
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+.pv-stat p {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin-top: 8px;
+}
+.partners-content {
+  padding: clamp(40px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--white);
+}
+.partners-content h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 24px;
+}
+.partners-content h2 em { font-style: italic; color: var(--accent-text); }
+.partners-content > p {
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-bottom: 36px;
+}
+.partner-benefits {
+  list-style: none;
+  margin-bottom: 40px;
+}
+.partner-benefits li {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(196,189,179,0.3);
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.partner-benefits li:first-child { border-top: 1px solid rgba(196,189,179,0.3); }
+.partner-benefits li svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.partners-cta-row {
+  display: flex; gap: 16px; align-items: center;
+}
+.btn-dark {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 36px;
+  background: var(--ink);
+  color: var(--white);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+.btn-dark:hover {}
+.partners-cta-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* ===== ABOUT FULL ===== */
+.about-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--white);
+}
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 48px;
+}
+.about-col-main {
+  grid-column: 1 / 3;
+}
+.about-col-main h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 28px;
+}
+.about-col-main h2 em { font-style: italic; color: var(--accent-text); }
+.about-col-main p {
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.about-col-side {
+  padding-top: 8px;
+}
+.about-values { list-style: none; }
+.about-values li {
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(196,189,179,0.3);
+}
+.about-values li:first-child { border-top: 1px solid rgba(196,189,179,0.3); }
+.about-values li h4 {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+.about-values li p {
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ===== CTA BAND ===== */
+.cta-band {
+  padding: 28px 0;
+  background: var(--ink);
+}
+.cta-band .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.cta-band-text {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.cta-band h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cta-band h2 em { font-style: italic; color: var(--accent); }
+.cta-band p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+}
+.cta-band .btn-primary {
+  flex-shrink: 0;
+  padding: 12px 28px;
+  font-size: 0.78rem;
+}
+@media (max-width: 768px) {
+  .cta-band { padding: 24px 0; }
+  .cta-band .container { flex-direction: column; text-align: center; gap: 16px; }
+  .cta-band-text { flex-direction: column; gap: 8px; }
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  padding: clamp(48px, 6vw, 80px) 0 40px;
+  background: #141412;
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px;
+  padding-bottom: 60px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.footer-brand {}
+.footer-brand .nav-logo {
+  display: flex;
+  margin-bottom: 20px;
+}
+.footer-brand .nav-logo .logo-name { color: #fefdfb; }
+.footer-brand .nav-logo .logo-tag { color: #fefdfb; }
+.footer-brand p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.35);
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+
+.footer-col h4 {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 24px;
+}
+.footer-col a {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.35);
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.3s;
+}
+.footer-col a:hover { color: var(--accent); }
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 32px;
+}
+.footer-bottom p {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.2);
+}
+.footer-bottom a {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.2);
+  text-decoration: none;
+}
+.footer-bottom a:hover { color: var(--accent); }
+
+/* ===== FAQ ===== */
+.faq-section {
+  padding: clamp(48px, 6vw, 80px) 0;
+  background: var(--ink);
+}
+.faq-inner {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: clamp(40px, 6vw, 100px);
+  align-items: start;
+}
+.faq-header {
+  position: sticky;
+  top: 120px;
+}
+.faq-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.5vw, 3.2rem);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--white);
+}
+.faq-header h2 em { font-style: italic; color: var(--accent); }
+.faq-list {
+  max-width: none;
+}
+.faq-item {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.faq-item:first-child {
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.9);
+  text-align: left;
+  transition: color 0.3s;
+}
+.faq-question:hover { color: var(--accent); }
+.faq-question svg {
+  flex-shrink: 0;
+  margin-left: 16px;
+  transition: transform 0.3s;
+}
+.faq-item.active .faq-question svg {
+  transform: rotate(180deg);
+}
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.faq-item.active .faq-answer {
+  max-height: 200px;
+}
+.faq-answer p {
+  padding: 0 0 24px;
+  font-size: 0.92rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .fp-grid { grid-template-columns: repeat(2, 1fr); }
+  .fp-grid .fp-card:last-child { display: none; }
+  .properties-grid { grid-template-columns: repeat(2, 1fr); }
+  .testimonial-card { flex: 0 0 300px; }
+  .about-grid { grid-template-columns: 1fr; }
+  .about-col-main { grid-column: 1; }
+  .footer-top { grid-template-columns: 1fr 1fr; }
+  .hero-stats { display: none; }
+  .browse-bar { flex-wrap: wrap; }
+  .browse-field { min-width: calc(50% - 10px); }
+}
+@media (max-width: 768px) {
+  .fp-title { font-size: clamp(1.4rem, 5vw, 1.8rem); white-space: nowrap; }
+  .fp-grid {
+    grid-template-columns: 1fr;
+  }
+  .fp-grid .fp-card:last-child { display: block; }
+  .fp-city-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    padding-bottom: 4px;
+    gap: 20px;
+  }
+  .fp-city-links::-webkit-scrollbar { display: none; }
+  .fp-cta { margin-top: 24px; }
+  .nav-links { display: none; }
+  .nav-mobile { display: block; }
+  .about-brief-inner { grid-template-columns: 1fr; }
+  .why-grid { grid-template-columns: 1fr; }
+  .properties-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .properties-grid { grid-template-columns: 1fr; }
+  .testimonial-card { flex: 0 0 280px; }
+  .faq-inner { grid-template-columns: 1fr; }
+  .faq-header { position: static; margin-bottom: 32px; }
+  .partners-inner { grid-template-columns: 1fr; }
+  .partners-visual { min-height: 300px; }
+  .footer-top { grid-template-columns: 1fr; }
+  .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+  .browse-bar { flex-direction: column; }
+  .browse-field { min-width: 100%; }
+  .about-metrics { gap: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="container">
+    <a href="/" class="nav-logo">
+              <svg class="nav-icon-dark" width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#e8a82e"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#e8a82e"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#e8a82e"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#e8a82e"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#e8a82e"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#e8a82e"/><circle cx="40" cy="88" r="4" fill="#e8a82e"/></svg>
+              <svg class="nav-icon-light" width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+    <div class="nav-links">
+      <a href="/properties">Properties</a>
+      <a href="/partners">For Landlords</a>
+      <a href="/#about">About</a>
+      <a href="/partners/apply" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-mobile" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container">
+    <h1>Flexible Living,<br><em>Redefined.</em></h1>
+    <p class="hero-sub">Move-in ready, fully furnished with flexible lease terms.<br>No broker fees, no guarantors required, no hidden fees.</p>
+    <div class="hero-actions">
+      <a href="/properties" class="btn-primary">
+        Browse Residences
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
+      </a>
+      <a href="/partners" class="btn-outline">Partner With Us</a>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num">5 <span style="font-size: 1.2rem; vertical-align: middle;">★</span></div>
+      <div class="hero-stat-label">Rated 5 Stars by Our Tenants</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">1k+</div>
+      <div class="hero-stat-label">Tenants</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">$5M+</div>
+      <div class="hero-stat-label">Earned by Landlords</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <% if (typeof googleReviews !== 'undefined' && googleReviews.reviews && googleReviews.reviews.length > 0) { %>
+      <% googleReviews.reviews.forEach(function(r) { %>
+        <span class="marquee-item"><span class="marquee-avatar"><% if (r.avatar) { %><img src="<%= r.avatar %>" alt="<%= r.author %>" referrerpolicy="no-referrer"><% } else { %><svg viewBox="0 0 24 24" fill="var(--muted)"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg><% } %></span>&ldquo;<%= r.text.length > 120 ? r.text.substring(0, 120) + '...' : r.text %>&rdquo; &mdash; <%= r.author %></span>
+      <% }); %>
+      <%/* Duplicate for seamless loop */ %>
+      <% googleReviews.reviews.forEach(function(r) { %>
+        <span class="marquee-item"><span class="marquee-avatar"><% if (r.avatar) { %><img src="<%= r.avatar %>" alt="<%= r.author %>" referrerpolicy="no-referrer"><% } else { %><svg viewBox="0 0 24 24" fill="var(--muted)"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg><% } %></span>&ldquo;<%= r.text.length > 120 ? r.text.substring(0, 120) + '...' : r.text %>&rdquo; &mdash; <%= r.author %></span>
+      <% }); %>
+    <% } else { %>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/dillon.jpg" alt="Dillon Del Toro"></span>&ldquo;It&rsquo;s rare to find a landlord who genuinely cares about their tenants and takes pride in maintaining their properties.&rdquo; &mdash; Dillon Del Toro</span>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/daniela.jpg" alt="Daniela Hoyos"></span>&ldquo;I&rsquo;ve had an excellent experience renting from Vinny. This is the second apartment of his that I&rsquo;ve lived in, and that alone says a lot.&rdquo; &mdash; Daniela Hoyos</span>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/savera.jpg" alt="Savera Bhatnagar" style="object-position: center 10%;"></span>&ldquo;Love Hive and their customer service. I have been staying in their units for almost 2 yrs and have become best friends with my roommates.&rdquo; &mdash; Savera Bhatnagar</span>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/dillon.jpg" alt="Dillon Del Toro"></span>&ldquo;It&rsquo;s rare to find a landlord who genuinely cares about their tenants and takes pride in maintaining their properties.&rdquo; &mdash; Dillon Del Toro</span>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/daniela.jpg" alt="Daniela Hoyos"></span>&ldquo;I&rsquo;ve had an excellent experience renting from Vinny. This is the second apartment of his that I&rsquo;ve lived in, and that alone says a lot.&rdquo; &mdash; Daniela Hoyos</span>
+      <span class="marquee-item"><span class="marquee-avatar"><img src="/images/savera.jpg" alt="Savera Bhatnagar" style="object-position: center 10%;"></span>&ldquo;Love Hive and their customer service. I have been staying in their units for almost 2 yrs and have become best friends with my roommates.&rdquo; &mdash; Savera Bhatnagar</span>
+    <% } %>
+  </div>
+</div>
+
+<!-- FEATURED PREVIEW -->
+<section class="featured-preview">
+  <div class="container">
+    <h2 class="fp-title reveal">Find Your Next Furnished Home</h2>
+    <div class="fp-city-links reveal">
+      <a class="fp-city-link active" data-location="">All Cities</a>
+      <a class="fp-city-link" data-location="New York">New York</a>
+      <a class="fp-city-link" data-location="Los Angeles">Los Angeles</a>
+      <a class="fp-city-link" data-location="Chicago">Chicago</a>
+      <a class="fp-city-link" data-location="Miami">Miami</a>
+      <a class="fp-city-link" data-location="Washington DC">DC</a>
+      <a class="fp-city-link" data-location="San Francisco">San Francisco</a>
+      <a class="fp-city-link" data-location="Boston">Boston</a>
+    </div>
+    <div class="fp-grid reveal">
+<% featuredListings.forEach(function(listing) { %>
+<a href="/properties/<%= listing.id %>" class="fp-card" style="text-decoration: none; color: inherit; display: block;" data-location="<%= listing.location || 'New York' %>">
+  <div class="fp-card-img">
+    <div class="fp-card-slides">
+      <% if (listing.images && listing.images.length > 0) { %>
+        <% listing.images.forEach(function(img) { %>
+        <div class="fp-card-img-inner" style="background-image: url('<%= img %>');"></div>
+        <% }); %>
+      <% } else { %>
+        <div class="fp-card-img-inner" style="background: linear-gradient(145deg, #d4ccc0 0%, #b8a898 30%, #a89080 60%, #c4b8a8 100%);"></div>
+      <% } %>
+    </div>
+    <% if (listing.images && listing.images.length > 1) { %>
+    <div class="fp-slide-dots">
+      <% listing.images.forEach(function(img, i) { %>
+      <span class="fp-slide-dot<%= i === 0 ? ' active' : '' %>"></span>
+      <% }); %>
+    </div>
+    <% } %>
+    <% if (listing.status !== 'available') { %>
+    <span class="fp-card-badge <%= listing.status === 'just_listed' ? 'badge-just-listed' : '' %>"><%= listing.status === 'just_listed' ? 'Just Listed' : 'Coming Soon' %></span>
+    <% } %>
+  </div>
+  <div class="fp-card-info">
+    <h3><%= listing.title %></h3>
+    <p class="fp-card-details">
+      <% if (listing.available_from && listing.available_to) { %>
+      <%= new Date(listing.available_from).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) %> – <%= new Date(listing.available_to).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) %> &nbsp;|&nbsp;
+      <% } %>
+      $<%= listing.price_monthly.toLocaleString() %>/mo &nbsp;|&nbsp;
+      <%= listing.bedrooms === 0 ? 'Studio' : listing.bedrooms + ' BR' %> &nbsp;
+      <%= listing.bathrooms %> Bath
+    </p>
+  </div>
+</a>
+<% }); %>
+    <div class="fp-empty-state" id="fp-empty-state" style="display: none;">
+      <p>No listings available in this location yet.</p>
+    </div>
+    </div>
+    <div class="fp-cta reveal">
+      <a href="/properties" class="fp-browse-link">
+        Browse all listings
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIAL BANNER -->
+<div class="testimonial-banner">
+  <div class="container">
+    <button class="tb-arrow" id="tb-prev" aria-label="Previous testimonial">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 8H3M7 4l-4 4 4 4" stroke="#fff" stroke-width="1.3"/></svg>
+    </button>
+    <div class="tb-slide-area">
+      <div class="tb-slide" id="tb-slide">
+        <div class="tb-author">
+          <div class="tb-avatar"><img id="tb-avatar" src="/images/alexandra.png" alt=""></div>
+          <span class="tb-name" id="tb-name">Alexandra Aiah</span>
+        </div>
+        <div class="tb-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+        <span class="tb-text" id="tb-text">"Great experience and very attentive to requests or when issues came up."</span>
+      </div>
+    </div>
+    <a href="#reviews" class="tb-link" aria-label="Read all testimonials">Read All</a>
+    <button class="tb-arrow" id="tb-next" aria-label="Next testimonial">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.3"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ABOUT BRIEF -->
+<section class="about-brief" id="about">
+  <div class="container">
+    <div class="about-brief-inner reveal">
+      <div class="about-brief-left">
+        <div class="section-tag">Who We Are</div>
+        <h2>Flexible Solutions<br>For <em>Residents.</em></h2>
+      </div>
+      <div class="about-brief-right">
+        <p>At Hive we believe cities are built by the people who live in them. That's why we're building a better rental model that puts residents first.</p>
+        <div class="about-pillars">
+          <div class="about-pillar">
+            <h4>Lease On Your Terms</h4>
+            <p>Month-to-month lease terms designed for your lifestyle. Stay as long as you need — extend or move on whenever you're ready.</p>
+          </div>
+          <div class="about-pillar">
+            <h4>Move-In Ready</h4>
+            <p>Our units are thoughtfully furnished and prepared for immediate move-in. No shopping, no setup. Just walk in and start living.</p>
+          </div>
+          <div class="about-pillar">
+            <h4>Transparent Pricing</h4>
+            <p>No broker fees. No guarantors required. No hidden fees. What you see is what you pay — straightforward and honest.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY CHOOSE US -->
+<section class="why-section">
+  <div class="container">
+    <div class="why-header reveal">
+      <h2>We Do The Legwork. <em>You Simply Show Up.</em></h2>
+    </div>
+    <div class="why-grid reveal">
+      <div class="why-card">
+        <h3>Fully Furnished</h3>
+        <p>Every apartment is thoughtfully furnished and prepared for immediate move-in. Just bring your suitcase.</p>
+      </div>
+      <div class="why-card">
+        <h3>No Hidden Fees</h3>
+        <p>No broker fees, no guarantors required. Transparent pricing with everything included in one monthly payment.</p>
+      </div>
+      <div class="why-card">
+        <h3>Flexible Terms</h3>
+        <p>Month-to-month lease terms that adapt to your life. Extend or move on whenever you're ready.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APPLY / PRE-APPROVED BANNER -->
+<section class="cta-band">
+  <div class="container reveal">
+    <div class="cta-band-text">
+      <h2>Ready To <em>Apply?</em></h2>
+      <p>Get started in minutes — no broker fees, no guarantors.</p>
+    </div>
+    <a href="/apply" class="btn-primary">
+      Apply Now
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section" id="reviews">
+  <div class="container">
+    <div class="testimonials-header reveal">
+      <div class="section-tag">Google Reviews</div>
+      <% if (typeof googleReviews !== 'undefined' && googleReviews.rating) { %>
+      <h2><%= googleReviews.rating %> Stars <em>on Google.</em></h2>
+      <p style="color: var(--muted); font-size: 0.95rem; margin-top: 8px;"><%= googleReviews.totalReviews %> reviews from real residents</p>
+      <% } else { %>
+      <h2>What Our Clients <em>Say.</em></h2>
+      <% } %>
+    </div>
+    <div class="testimonials-grid reveal">
+      <% if (typeof googleReviews !== 'undefined' && googleReviews.reviews && googleReviews.reviews.length > 0) { %>
+        <% googleReviews.reviews.forEach(function(r) { %>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><% for (var s = 0; s < r.rating; s++) { %><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><% } %></div>
+          <blockquote>"<%= r.text %>"</blockquote>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar"><% if (r.avatar) { %><img src="<%= r.avatar %>" alt="<%= r.author %>" referrerpolicy="no-referrer" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"><% } else { %><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg><% } %></div>
+            <div class="testimonial-author-info"><h4><%= r.author %></h4><p><%= r.time %></p></div>
+          </div>
+        </div>
+        <% }); %>
+      <% } else { %>
+        <%/* Fallback hardcoded reviews with real photos — mixed/alternated */ %>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Great experience and very attentive to requests or when issues came up."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/alexandra.png" alt="Alexandra Aiah" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Alexandra Aiah</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"It's rare to find a landlord who genuinely cares about their tenants and takes pride in maintaining their properties."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/dillon.jpg" alt="Dillon Del Toro" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Dillon Del Toro</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Hive made it easy and less stressful. I would recommend it to anyone looking for a place in the city."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/sajan.png" alt="Sajan George" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Sajan George</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Super easy process, I had an amazing stay with a very nice room. Always super easy to get in contact when needed! Would 100% recommend."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/will.jpg" alt="Will OConnell" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Will OConnell</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"I've had an excellent experience renting from Vinny. This is the second apartment of his that I've lived in, and that alone says a lot."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/daniela.jpg" alt="Daniela Hoyos" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Daniela Hoyos</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Amazing experience!! Everything was seamless from start to finish."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/eileen.png" alt="Eileen Lee" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Eileen Lee</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Amazing stay! The apartments are always super nice and have plenty of amenities. Vinny is very responsive and ready to help whenever we need."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/clara.jpg" alt="Clara Falxa" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div><div class="testimonial-author-info"><h4>Clara Falxa</h4><p>Google Review</p></div></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.6 14,12 15.6,19 10,15.4 4.4,19 6,12 1,7.6 7.4,7"/></svg></div>
+          <blockquote>"Love Hive and their customer service. I have been staying in their units for almost 2 yrs and have become best friends with my roommates."</blockquote>
+          <div class="testimonial-author"><div class="testimonial-avatar"><img src="/images/savera.jpg" alt="Savera Bhatnagar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center 10%;"></div><div class="testimonial-author-info"><h4>Savera Bhatnagar</h4><p>Google Review</p></div></div>
+        </div>
+      <% } %>
+    </div>
+    <div class="carousel-indicators" id="testimonial-dots"></div>
+    <div style="text-align: center; margin-top: clamp(32px, 4vw, 48px);">
+      <a href="https://maps.app.goo.gl/KD5n7sVz1eoVoh9W9" target="_blank" class="fp-browse-link">View All Google Reviews <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="container">
+    <div class="faq-inner reveal">
+    <div class="faq-header">
+      <h2>Frequently Asked <em>Questions.</em></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>How does the move-in process work?</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.3"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Once you're approved, we'll schedule your move-in date. On the day, you'll receive a welcome package with keys and WiFi info. Every apartment is professionally cleaned and fully furnished. Just bring your suitcase.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>What's included in the monthly rent?</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.3"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Your rent covers everything: fully furnished apartment, WiFi, utilities (electric, gas, water), and building amenities. There are no hidden fees, broker fees, or security deposits beyond the first month.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Can I extend my stay?</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.3"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Absolutely. Our leases are month-to-month, so you can extend your stay for as long as you'd like.</p>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo">
+              <svg class="nav-icon-dark" width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#e8a82e"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#e8a82e"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#e8a82e"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#e8a82e"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#e8a82e"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#e8a82e"/><circle cx="40" cy="88" r="4" fill="#e8a82e"/></svg>
+              <svg class="nav-icon-light" width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+        <p>Move-in ready, fully furnished with flexible lease terms. No broker fees, no guarantors required, no hidden fees.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Residences</h4>
+        <a href="#">New York</a>
+        <a href="#">Los Angeles</a>
+        <a href="#">Chicago</a>
+        <a href="#">Miami</a>
+        <a href="/properties">All Properties</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#about">About Us</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="/partners/apply">Contact Us</a>
+        <a href="#">FAQ</a>
+        <a href="/partners">Partner With Us</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Privacy Policy</a>
+        <a href="/admin/login">Admin Login</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Hive. All rights reserved.</p>
+      <a href="#">hello@hiveny.com</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Testimonial banner carousel
+(function() {
+  <% if (typeof googleReviews !== 'undefined' && googleReviews.reviews && googleReviews.reviews.length > 0) { %>
+  const quotes = <%- JSON.stringify(googleReviews.reviews.map(function(r) { return { name: r.author, text: '\u201C' + r.text.substring(0, 150) + (r.text.length > 150 ? '...' : '') + '\u201D', avatar: r.avatar || '' }; })) %>;
+  <% } else { %>
+  const quotes = [
+    { name: 'Alexandra Aiah', text: '\u201CGreat experience and very attentive to requests or when issues came up.\u201D', avatar: '/images/alexandra.png' },
+    { name: 'Dillon Del Toro', text: '\u201CIt\u2019s rare to find a landlord who genuinely cares about their tenants and takes pride in maintaining their properties.\u201D', avatar: '/images/dillon.jpg' },
+    { name: 'Sajan George', text: '\u201CHive made it easy and less stressful \u2014 I would recommend it to anyone.\u201D', avatar: '/images/sajan.png' },
+    { name: 'Will OConnell', text: '\u201CSuper easy process, I had an amazing stay with a very nice room. Always super easy to get in contact when needed!\u201D', avatar: '/images/will.jpg' },
+    { name: 'Daniela Hoyos', text: '\u201CI\u2019ve had an excellent experience renting from Vinny. This is the second apartment of his that I\u2019ve lived in.\u201D', avatar: '/images/daniela.jpg' },
+    { name: 'Eileen Lee', text: '\u201CAmazing experience!! Everything was seamless from start to finish.\u201D', avatar: '/images/eileen.png' },
+    { name: 'Clara Falxa', text: '\u201CAmazing stay! The apartments are always super nice and have plenty of amenities. Vinny is very responsive.\u201D', avatar: '/images/clara.jpg' },
+    { name: 'Savera Bhatnagar', text: '\u201CLove Hive and their customer service. I have been staying in their units for almost 2 yrs.\u201D', avatar: '/images/savera.jpg' }
+  ];
+  <% } %>
+  let idx = 0;
+  const nameEl = document.getElementById('tb-name');
+  const textEl = document.getElementById('tb-text');
+  const avatarEl = document.getElementById('tb-avatar');
+  const prevBtn = document.getElementById('tb-prev');
+  const nextBtn = document.getElementById('tb-next');
+  if (!nameEl || !textEl) return;
+  function show(i) {
+    idx = (i + quotes.length) % quotes.length;
+    nameEl.textContent = quotes[idx].name;
+    textEl.textContent = quotes[idx].text;
+    if (avatarEl && quotes[idx].avatar) { avatarEl.src = quotes[idx].avatar; avatarEl.alt = quotes[idx].name; }
+  }
+  // Auto-rotate every 5 seconds
+  let autoTimer = setInterval(() => show(idx + 1), 5000);
+  function resetTimer() { clearInterval(autoTimer); autoTimer = setInterval(() => show(idx + 1), 5000); }
+  if (prevBtn) prevBtn.addEventListener('click', () => { show(idx - 1); resetTimer(); });
+  if (nextBtn) nextBtn.addEventListener('click', () => { show(idx + 1); resetTimer(); });
+})();
+
+// Nav scroll
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// Reveal on scroll
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.05, rootMargin: '0px 0px 50px 0px' });
+reveals.forEach(el => observer.observe(el));
+// Fallback: reveal elements already in viewport on load
+requestAnimationFrame(() => {
+  reveals.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight) {
+      el.classList.add('visible');
+    }
+  });
+});
+
+
+// Card image carousels — touch swipe only (mobile)
+if (window.matchMedia('(max-width: 768px)').matches) {
+  document.querySelectorAll('.fp-card-img').forEach(card => {
+    const slides = card.querySelector('.fp-card-slides');
+    const imgs = card.querySelectorAll('.fp-card-img-inner');
+    const dots = card.querySelectorAll('.fp-slide-dot');
+    if (!slides || imgs.length <= 1) return;
+    let idx = 0;
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    function go(i) {
+      idx = (i + imgs.length) % imgs.length;
+      slides.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      dots.forEach((d, j) => d.classList.toggle('active', j === idx));
+    }
+
+    card.addEventListener('touchstart', function(e) {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isDragging = true;
+    }, { passive: true });
+
+    card.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      var diffX = e.touches[0].clientX - startX;
+      var diffY = e.touches[0].clientY - startY;
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    card.addEventListener('touchend', function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      var endX = e.changedTouches[0].clientX;
+      var diffX = endX - startX;
+      var threshold = 40;
+      if (diffX < -threshold) {
+        go(idx + 1);
+      } else if (diffX > threshold) {
+        go(idx - 1);
+      }
+    }, { passive: true });
+  });
+}
+
+// Featured city links — filter cards by location
+document.querySelectorAll('.fp-city-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.fp-city-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    var filter = link.dataset.location;
+    var visibleCount = 0;
+    document.querySelectorAll('.fp-card').forEach(card => {
+      if (!filter || card.dataset.location === filter) {
+        card.style.display = '';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    var emptyState = document.getElementById('fp-empty-state');
+    if (emptyState) {
+      emptyState.style.display = visibleCount === 0 ? '' : 'none';
+    }
+  });
+});
+
+// Testimonials carousel indicators
+(function() {
+  const grid = document.querySelector('.testimonials-grid');
+  const dotsContainer = document.getElementById('testimonial-dots');
+  if (!grid || !dotsContainer) return;
+  const cards = grid.querySelectorAll('.testimonial-card');
+  const perPage = 3;
+  const totalPages = Math.ceil(cards.length / perPage);
+  for (let i = 0; i < totalPages; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Page ' + (i + 1));
+    dot.addEventListener('click', () => {
+      const card = cards[i * perPage];
+      if (card) grid.scrollTo({ left: card.offsetLeft - grid.offsetLeft, behavior: 'smooth' });
+    });
+    dotsContainer.appendChild(dot);
+  }
+  let currentPage = 0;
+  function updateDots() {
+    dotsContainer.querySelectorAll('.carousel-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === currentPage);
+    });
+  }
+  function scrollToPage(page) {
+    currentPage = Math.max(0, Math.min(page, totalPages - 1));
+    const card = cards[currentPage * perPage];
+    if (card) grid.scrollTo({ left: card.offsetLeft - grid.offsetLeft, behavior: 'smooth' });
+    updateDots();
+  }
+  grid.addEventListener('scroll', () => {
+    const cardWidth = cards[0].offsetWidth + 20;
+    currentPage = Math.round(grid.scrollLeft / (cardWidth * perPage));
+    updateDots();
+  });
+})();
+
+// FAQ accordion
+document.querySelectorAll('.faq-question').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.parentElement;
+    const isActive = item.classList.contains('active');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+    if (!isActive) item.classList.add('active');
+  });
+});
+
+// Mobile nav
+const mobileBtn = document.querySelector('.nav-mobile');
+const navLinks = document.querySelector('.nav-links');
+if (mobileBtn) {
+  mobileBtn.addEventListener('click', () => {
+    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+    if (navLinks.style.display === 'flex') {
+      navLinks.style.position = 'absolute';
+      navLinks.style.top = '100%';
+      navLinks.style.left = '0';
+      navLinks.style.right = '0';
+      navLinks.style.background = 'rgba(254,253,251,0.98)';
+      navLinks.style.flexDirection = 'column';
+      navLinks.style.padding = '24px clamp(24px, 5vw, 80px)';
+      navLinks.style.gap = '20px';
+      navLinks.querySelectorAll('a').forEach(a => {
+        if (a.classList.contains('nav-cta')) {
+          a.style.setProperty('color', 'var(--ink)', 'important');
+          a.style.setProperty('border', '1px solid var(--ink)', 'important');
+        } else {
+          a.style.color = 'var(--ink)';
+        }
+      });
+    }
+  });
+}
+</script>
+
+</body>
+</html>

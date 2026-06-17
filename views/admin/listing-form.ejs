@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Admin - <%= (listing && listing.id) ? 'Edit Listing' : 'Add New Listing' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a18;
+      --cream: #f5f2ed;
+      --accent: #d4920b;
+      --accent-dark: #b87d09;
+      --white: #fefdfb;
+      --muted: #8a8378;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* --- Nav Bar --- */
+    .admin-nav {
+      background: var(--ink);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 56px;
+    }
+
+    .admin-nav-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--white);
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+
+    .admin-nav-brand span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-left: 10px;
+    }
+
+    .admin-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .admin-nav-right .admin-greeting {
+      color: #b0ada6;
+    }
+
+    .admin-nav-right a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .admin-nav-right a:hover {
+      color: var(--accent-dark);
+    }
+
+    /* --- Main Content --- */
+    .admin-content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .admin-header {
+      margin-bottom: 24px;
+    }
+
+    .admin-header h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    /* --- Error Message --- */
+    .error-message {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* --- Form Card --- */
+    .form-card {
+      background: var(--white);
+      border: 1px solid #e0ddd7;
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: 0 1px 4px rgba(26, 26, 24, 0.04);
+    }
+
+    .form-section {
+      margin-bottom: 28px;
+    }
+
+    .form-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eceae5;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      border: 1px solid #d4d0c8;
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--ink);
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent-dark);
+      box-shadow: 0 0 0 3px rgba(230, 210, 0, 0.15);
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-group select {
+      cursor: pointer;
+    }
+
+    /* --- Checkbox --- */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--accent-dark);
+    }
+
+    .checkbox-group label {
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+
+    /* --- Images --- */
+    .images-section {
+      margin-bottom: 16px;
+    }
+
+    .btn-upload {
+      display: inline-block;
+      padding: 9px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      background: #f1f0ec;
+      color: var(--ink);
+      border: 1px solid #d4d0c8;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-upload:hover {
+      background: #e0ddd7;
+    }
+
+    #images-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .image-preview {
+      position: relative;
+      width: 120px;
+      height: 90px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #e0ddd7;
+    }
+
+    .image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .remove-image {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      background: rgba(26, 26, 24, 0.7);
+      color: var(--white);
+      border: none;
+      border-radius: 50%;
+      font-size: 14px;
+      line-height: 22px;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .remove-image:hover {
+      background: rgba(185, 28, 28, 0.85);
+    }
+
+    /* --- Unified Image Container (drag-and-drop) --- */
+    #unified-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      min-height: 50px;
+    }
+
+    #unified-images .image-preview {
+      cursor: grab;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      user-select: none;
+    }
+
+    #unified-images .image-preview:active {
+      cursor: grabbing;
+    }
+
+    #unified-images .image-preview.dragging {
+      opacity: 0.4;
+      transform: scale(0.95);
+    }
+
+    #unified-images .image-preview.drag-over {
+      box-shadow: -3px 0 0 0 var(--accent);
+    }
+
+    .image-hero-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: var(--accent);
+      color: var(--ink);
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .image-error-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: #b91c1c;
+      color: #fff;
+      font-size: 8px;
+      font-weight: 600;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    /* --- Google Drive Link Input --- */
+    .gdrive-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .gdrive-input-row input {
+      flex: 1;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      border: 1px solid #d4d0c8;
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--ink);
+    }
+
+    .gdrive-input-row input:focus {
+      outline: none;
+      border-color: var(--accent-dark);
+      box-shadow: 0 0 0 3px rgba(230, 210, 0, 0.15);
+    }
+
+    .btn-add-gdrive {
+      padding: 9px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-add-gdrive:hover {
+      background: #333330;
+    }
+
+    .gdrive-error {
+      color: #b91c1c;
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    /* --- Amenity Checkbox Grid --- */
+    .amenity-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+    }
+
+    .amenity-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+      font-size: 14px;
+    }
+
+    .amenity-checkbox:hover {
+      background: #f5f4f0;
+    }
+
+    .amenity-checkbox input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      cursor: pointer;
+      accent-color: var(--accent-dark);
+      flex-shrink: 0;
+    }
+
+    .amenity-checkbox span {
+      font-size: 13px;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+
+    @media (max-width: 600px) {
+      .amenity-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- Bookings Table --- */
+    .bookings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .bookings-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-bottom: 1px solid #eceae5;
+    }
+
+    .bookings-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid #f1f0ec;
+      vertical-align: middle;
+    }
+
+    .bookings-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .booking-status {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .booking-active {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+    }
+
+    .booking-upcoming {
+      background: rgba(234, 179, 8, 0.1);
+      color: #a16207;
+    }
+
+    .booking-past {
+      background: #f1f0ec;
+      color: var(--muted);
+    }
+
+    .btn-remove-booking {
+      background: none;
+      border: none;
+      color: #b91c1c;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-remove-booking:hover {
+      background: #fef2f2;
+    }
+
+    .add-booking-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      background: #fafaf8;
+      border: 1px solid #eceae5;
+      border-radius: 6px;
+    }
+
+    .add-booking-row .form-group {
+      margin-bottom: 0;
+    }
+
+    .add-booking-row label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .btn-add-booking {
+      padding: 9px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-add-booking:hover {
+      background: #333330;
+    }
+
+    .no-bookings {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 16px 0;
+    }
+
+    @media (max-width: 600px) {
+      .add-booking-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- Form Actions --- */
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 24px;
+      border-top: 1px solid #eceae5;
+    }
+
+    .btn-save {
+      padding: 10px 28px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-save:hover {
+      background: #333330;
+    }
+
+    .btn-cancel {
+      display: inline-block;
+      padding: 10px 28px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      background: none;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid #d4d0c8;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-cancel:hover {
+      background: #f1f0ec;
+    }
+
+    @media (max-width: 600px) {
+      .form-row,
+      .form-row-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="admin-nav">
+    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
+    <div class="admin-nav-right">
+      <span class="admin-greeting">Hello, <%= adminName %></span>
+      <a href="/admin/logout">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="admin-content">
+    <div class="admin-header">
+      <h2><%= (listing && listing.id) ? 'Edit Listing' : 'Add New Listing' %></h2>
+    </div>
+
+    <% if (error) { %>
+      <div class="error-message"><%= error %></div>
+    <% } %>
+
+    <div class="form-card">
+      <form method="POST" action="<%= (listing && listing.id) ? '/admin/listings/' + listing.id : '/admin/listings' %>" enctype="multipart/form-data">
+
+        <!-- 1. Basic Info (matches hero: title, highlights, location, neighborhood, city, state) -->
+        <div class="form-section">
+          <div class="form-section-title">Basic Information</div>
+          <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required value="<%= (listing && listing.title) ? listing.title : '' %>" placeholder="e.g. Luxe Studio in SoHo">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="location">Location (Metro Area)</label>
+              <select id="location" name="location">
+                <option value="New York" <%= (listing && listing.location === 'New York') ? 'selected' : '' %>>New York</option>
+                <option value="Los Angeles" <%= (listing && listing.location === 'Los Angeles') ? 'selected' : '' %>>Los Angeles</option>
+                <option value="Chicago" <%= (listing && listing.location === 'Chicago') ? 'selected' : '' %>>Chicago</option>
+                <option value="Miami" <%= (listing && listing.location === 'Miami') ? 'selected' : '' %>>Miami</option>
+                <option value="San Francisco" <%= (listing && listing.location === 'San Francisco') ? 'selected' : '' %>>San Francisco</option>
+                <option value="Washington DC" <%= (listing && listing.location === 'Washington DC') ? 'selected' : '' %>>Washington DC</option>
+                <option value="Boston" <%= (listing && listing.location === 'Boston') ? 'selected' : '' %>>Boston</option>
+                <option value="Seattle" <%= (listing && listing.location === 'Seattle') ? 'selected' : '' %>>Seattle</option>
+                <option value="Austin" <%= (listing && listing.location === 'Austin') ? 'selected' : '' %>>Austin</option>
+                <option value="Denver" <%= (listing && listing.location === 'Denver') ? 'selected' : '' %>>Denver</option>
+                <option value="Nashville" <%= (listing && listing.location === 'Nashville') ? 'selected' : '' %>>Nashville</option>
+                <option value="Atlanta" <%= (listing && listing.location === 'Atlanta') ? 'selected' : '' %>>Atlanta</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="neighborhood">Neighborhood</label>
+              <input type="text" id="neighborhood" name="neighborhood" required value="<%= (listing && listing.neighborhood) ? listing.neighborhood : '' %>" placeholder="e.g. SoHo">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="city">City</label>
+              <input type="text" id="city" name="city" required value="<%= (listing && listing.city) ? listing.city : '' %>" placeholder="e.g. Manhattan">
+            </div>
+            <div class="form-group">
+              <label for="state">State</label>
+              <input type="text" id="state" name="state" value="<%= (listing && listing.state) ? listing.state : '' %>" placeholder="e.g. NY" maxlength="2" style="text-transform: uppercase;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Unit Details (matches hero stats: beds, baths, sqft, unit, bed type, price) -->
+        <div class="form-section">
+          <div class="form-section-title">Unit Details</div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="bedrooms">Bedrooms</label>
+              <select id="bedrooms" name="bedrooms">
+                <option value="0" <%= (listing && listing.bedrooms == 0) ? 'selected' : '' %>>Studio</option>
+                <option value="1" <%= (listing && listing.bedrooms == 1) ? 'selected' : '' %>>1</option>
+                <option value="2" <%= (listing && listing.bedrooms == 2) ? 'selected' : '' %>>2</option>
+                <option value="3" <%= (listing && listing.bedrooms == 3) ? 'selected' : '' %>>3</option>
+                <option value="4" <%= (listing && listing.bedrooms == 4) ? 'selected' : '' %>>4</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="bathrooms">Bathrooms</label>
+              <select id="bathrooms" name="bathrooms">
+                <option value="1" <%= (listing && listing.bathrooms == 1) ? 'selected' : '' %>>1</option>
+                <option value="2" <%= (listing && listing.bathrooms == 2) ? 'selected' : '' %>>2</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sqft">Square Footage</label>
+              <input type="number" id="sqft" name="sqft" min="0" value="<%= (listing && listing.sqft) ? listing.sqft : '' %>" placeholder="e.g. 850">
+            </div>
+          </div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="floor">Unit Number</label>
+              <input type="text" id="floor" name="floor" value="<%= (listing && listing.floor) ? listing.floor : '' %>" placeholder="e.g. 12A">
+            </div>
+            <div class="form-group">
+              <label for="bed_type">Bed Type</label>
+              <select id="bed_type" name="bed_type">
+                <option value="" <%= (!listing || !listing.bed_type) ? 'selected' : '' %>>Not specified</option>
+                <option value="King" <%= (listing && listing.bed_type === 'King') ? 'selected' : '' %>>King</option>
+                <option value="Queen" <%= (listing && listing.bed_type === 'Queen') ? 'selected' : '' %>>Queen</option>
+                <option value="Full" <%= (listing && listing.bed_type === 'Full') ? 'selected' : '' %>>Full</option>
+                <option value="Twin" <%= (listing && listing.bed_type === 'Twin') ? 'selected' : '' %>>Twin</option>
+                <option value="2 Twin" <%= (listing && listing.bed_type === '2 Twin') ? 'selected' : '' %>>2 Twin</option>
+                <option value="Sofa Bed" <%= (listing && listing.bed_type === 'Sofa Bed') ? 'selected' : '' %>>Sofa Bed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="price_monthly">Monthly Price ($)</label>
+              <input type="number" id="price_monthly" name="price_monthly" required min="0" value="<%= (listing && listing.price_monthly) ? listing.price_monthly : '' %>" placeholder="e.g. 3500">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Listing Photos -->
+        <div class="form-section">
+          <div class="form-section-title">Listing Photos</div>
+          <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">
+            Drag images to reorder. The first image is used as the main hero photo. Up to 10 images.
+          </p>
+
+          <!-- Unified sortable container for ALL images -->
+          <div id="unified-images">
+            <% if (listing && listing.images && listing.images.length > 0) { %>
+              <% listing.images.forEach(function(url, index) { %>
+                <div class="image-preview" draggable="true" data-type="existing" data-url="<%= url %>">
+                  <img src="<%= url %>" alt="Listing image">
+                  <input type="hidden" name="existing_images" value="<%= url %>">
+                  <button type="button" class="remove-image" onclick="removeImage(this)">&times;</button>
+                  <% if (index === 0) { %>
+                    <span class="image-hero-badge">Hero</span>
+                  <% } %>
+                </div>
+              <% }); %>
+            <% } %>
+          </div>
+
+          <!-- Add Images (upload or Google Drive) -->
+          <div class="form-group" style="margin-top: 16px; background: #f8f6f2; border: 1px dashed #d4d0c8; border-radius: 8px; padding: 16px;">
+            <label style="margin-bottom: 8px; display: block; font-weight: 600;">Add Images</label>
+            <input type="file" id="image_files" name="image_files" multiple accept="image/jpeg,image/png,image/webp,image/gif" style="padding: 4px 0; margin-bottom: 10px; display: block;">
+            <div style="font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 10px;">— or paste a Google Drive link —</div>
+            <div class="gdrive-input-row">
+              <input type="text" id="gdrive-url" placeholder="Paste Google Drive sharing link...">
+              <button type="button" class="btn-add-gdrive" onclick="addGoogleDriveImage()">Add</button>
+            </div>
+            <div id="gdrive-error" class="gdrive-error"></div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 6px;">JPEG, PNG, WebP, or GIF. Max 10 MB each.</div>
+          </div>
+
+          <div class="form-group">
+            <label for="video_url">Video URL</label>
+            <input type="url" id="video_url" name="video_url" value="<%= (listing && listing.video_url) ? listing.video_url : '' %>" placeholder="e.g. https://youtube.com/watch?v=...">
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">YouTube or Vimeo link for the listing video tour</div>
+          </div>
+
+          <!-- Hidden field for image order -->
+          <input type="hidden" id="image_order" name="image_order" value="">
+        </div>
+
+        <!-- 3b. Floor Plan -->
+        <div class="form-section">
+          <div class="form-section-title">Floor Plan</div>
+
+          <!-- Floor plan preview -->
+          <div id="floor-plan-preview" style="margin-bottom: 12px;">
+            <% if (listing && listing.floor_plan_image) { %>
+              <div class="image-preview" style="display: inline-block;">
+                <img src="<%= listing.floor_plan_image %>" alt="Floor plan">
+                <button type="button" class="remove-image" onclick="removeFloorPlan()">&times;</button>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Add Floor Plan (upload or Google Drive) -->
+          <div class="form-group" style="background: #f8f6f2; border: 1px dashed #d4d0c8; border-radius: 8px; padding: 16px;">
+            <label style="margin-bottom: 8px; display: block; font-weight: 600;">Add Floor Plan</label>
+            <input type="file" id="floor_plan_file" name="floor_plan_file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style="padding: 4px 0; margin-bottom: 10px; display: block;">
+            <div style="font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 10px;">— or paste a Google Drive link —</div>
+            <div class="gdrive-input-row">
+              <input type="text" id="gdrive-floorplan-url" placeholder="Paste Google Drive sharing link...">
+              <button type="button" class="btn-add-gdrive" onclick="addFloorPlanFromDrive()">Add</button>
+            </div>
+            <div id="gdrive-floorplan-error" class="gdrive-error"></div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 6px;">JPEG, PNG, WebP, or SVG. Max 10 MB.</div>
+          </div>
+          <input type="hidden" id="floor_plan_image" name="floor_plan_image" value="<%= (listing && listing.floor_plan_image) ? listing.floor_plan_image : '' %>">
+        </div>
+
+        <!-- 4. Description (matches "About This Home") -->
+        <div class="form-section">
+          <div class="form-section-title">Description</div>
+          <div class="form-group">
+            <label for="description">About This Home</label>
+            <textarea id="description" name="description" placeholder="Describe the property, its features, and the surrounding area..."><%= (listing && listing.description) ? listing.description : '' %></textarea>
+          </div>
+        </div>
+
+        <!-- 5. Unit Amenities -->
+        <div class="form-section">
+          <div class="form-section-title">Unit Amenities</div>
+          <div class="amenity-grid">
+            <% var unitAmenities = [
+              'High-Speed WiFi', 'Central A/C', 'In-Unit Washer/Dryer', 'Fully Equipped Kitchen',
+              'Smart TV', 'Hardwood Floors', 'Blackout Curtains', 'Iron & Ironing Board',
+              'Coffee Maker', 'Dishwasher', 'Microwave', 'Towels & Linens',
+              'Hair Dryer', 'Workspace/Desk', 'Closet Space', 'Heating',
+              'Balcony/Terrace', 'City Views', 'Natural Light', 'Keyless Entry'
+            ]; %>
+            <% var existingAmenities = (listing && listing.amenities) ? listing.amenities : []; %>
+            <% unitAmenities.forEach(function(amenity) { %>
+              <label class="amenity-checkbox">
+                <input type="checkbox" name="amenities" value="<%= amenity %>" <%= existingAmenities.indexOf(amenity) !== -1 ? 'checked' : '' %>>
+                <span><%= amenity %></span>
+              </label>
+            <% }); %>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label for="amenities_custom">Other Unit Amenities</label>
+            <input type="text" id="amenities_custom" name="amenities_custom" placeholder="e.g. Record Player, Yoga Mats" value="<%= existingAmenities.filter(function(a) { return ['High-Speed WiFi','Central A/C','In-Unit Washer/Dryer','Fully Equipped Kitchen','Smart TV','Hardwood Floors','Blackout Curtains','Iron & Ironing Board','Coffee Maker','Dishwasher','Microwave','Towels & Linens','Hair Dryer','Workspace/Desk','Closet Space','Heating','Balcony/Terrace','City Views','Natural Light','Keyless Entry'].indexOf(a) === -1; }).join(', ') %>">
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Add any extra amenities not listed above, separated by commas</div>
+          </div>
+        </div>
+
+        <!-- 6. Building Amenities -->
+        <div class="form-section">
+          <div class="form-section-title">Building Amenities</div>
+          <div class="amenity-grid">
+            <% var buildingAmenitiesList = [
+              '24/7 Doorman', 'Fitness Center', 'Rooftop Terrace', 'Package Room',
+              'Bike Storage', 'Laundry Room', 'Elevator', 'Courtyard',
+              'Concierge', 'Parking Garage', 'Swimming Pool', 'Pet Friendly',
+              'Storage Units', 'Business Center', 'Children\'s Playroom', 'Garden'
+            ]; %>
+            <% var existingBuildingAmenities = (listing && listing.building_amenities) ? listing.building_amenities : []; %>
+            <% buildingAmenitiesList.forEach(function(amenity) { %>
+              <label class="amenity-checkbox">
+                <input type="checkbox" name="building_amenities_list" value="<%= amenity %>" <%= existingBuildingAmenities.indexOf(amenity) !== -1 ? 'checked' : '' %>>
+                <span><%= amenity %></span>
+              </label>
+            <% }); %>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label for="building_amenities_custom">Other Building Amenities</label>
+            <input type="text" id="building_amenities_custom" name="building_amenities_custom" placeholder="e.g. Valet, Wine Cellar" value="<%= existingBuildingAmenities.filter(function(a) { return ['24/7 Doorman','Fitness Center','Rooftop Terrace','Package Room','Bike Storage','Laundry Room','Elevator','Courtyard','Concierge','Parking Garage','Swimming Pool','Pet Friendly','Storage Units','Business Center','Children\'s Playroom','Garden'].indexOf(a) === -1; }).join(', ') %>">
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Add any extra building amenities not listed above, separated by commas</div>
+          </div>
+        </div>
+
+        <!-- 7. Location (matches Location section on public page) -->
+        <div class="form-section">
+          <div class="form-section-title">Location</div>
+          <div class="form-group">
+            <label for="address">Full Address</label>
+            <input type="text" id="address" name="address" value="<%= (listing && listing.address) ? listing.address : '' %>" placeholder="e.g. 350 Manhattan Avenue, New York, NY 10026">
+          </div>
+          <div class="form-group">
+            <label for="location_description">Location Description</label>
+            <textarea id="location_description" name="location_description" rows="3" placeholder="e.g. Located in the heart of Gramercy Park, this home puts you steps from the best dining, shopping, and nightlife Manhattan has to offer."><%= (listing && listing.location_description) ? listing.location_description : '' %></textarea>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Describe the neighborhood and what's nearby. Shown on the public listing page.</div>
+          </div>
+          <div class="form-group">
+            <label for="transit">Nearby Transit</label>
+            <div class="checkbox-group" style="margin-bottom: 8px;">
+              <input type="checkbox" id="auto-transit" onchange="handleTransitCheckbox(this)">
+              <label for="auto-transit" style="font-size: 13px; color: var(--muted);">Auto-fill from address</label>
+              <span id="transit-status" style="font-size: 12px; margin-left: 8px; display: none;"></span>
+            </div>
+            <textarea id="transit" name="transit" rows="2" placeholder="e.g. A/C at 116th St (1 min walk), 1 train at 125th St (5 min walk)"><%= (listing && listing.transit) ? listing.transit : '' %></textarea>
+          </div>
+        </div>
+
+        <!-- 8. Availability (matches sidebar: status, dates, min stay) -->
+        <div class="form-section">
+          <div class="form-section-title">Availability</div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status" name="status">
+                <option value="available" <%= (listing && listing.status === 'available') ? 'selected' : '' %>>Available</option>
+                <option value="just_listed" <%= (listing && listing.status === 'just_listed') ? 'selected' : '' %>>Just Listed</option>
+                <option value="coming_soon" <%= (!listing || listing.status === 'coming_soon') ? 'selected' : '' %>>Coming Soon</option>
+                <option value="rented" <%= (listing && listing.status === 'rented') ? 'selected' : '' %>>Rented</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="available_from">Available From</label>
+              <input type="date" id="available_from" name="available_from" value="<%= (listing && listing.available_from) ? new Date(listing.available_from).toISOString().split('T')[0] : '' %>">
+            </div>
+            <div class="form-group">
+              <label for="available_to">Available To</label>
+              <input type="date" id="available_to" name="available_to" value="<%= (listing && listing.available_to) ? new Date(listing.available_to).toISOString().split('T')[0] : '' %>">
+            </div>
+          </div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="min_stay">Min Stay (days)</label>
+              <input type="number" id="min_stay" name="min_stay" min="1" value="<%= (listing && listing.min_stay) ? listing.min_stay : 30 %>" placeholder="30">
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. Settings -->
+        <div class="form-section">
+          <div class="form-section-title">Settings</div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="featured" name="featured" <%= (listing && listing.featured) ? 'checked' : '' %>>
+            <label for="featured">Featured on Site</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="show_booking" name="show_booking" <%= (!listing || listing.show_booking !== false) ? 'checked' : '' %>>
+            <label for="show_booking">Show Booking Info</label>
+          </div>
+          <input type="hidden" name="sort_order" value="<%= (listing && listing.sort_order != null) ? listing.sort_order : 0 %>">
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="submit" class="btn-save">Save Listing</button>
+          <a href="/admin/dashboard" class="btn-cancel">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Bookings Section (separate from the main form, only shown when editing) -->
+    <% if (listing && listing.id) { %>
+    <div class="form-card" style="margin-top: 24px;">
+      <div class="form-section" style="margin-bottom: 0;">
+        <div class="form-section-title">Bookings</div>
+
+        <% if (bookings && bookings.length > 0) { %>
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>Guest</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% var today = new Date(); today.setHours(0,0,0,0); %>
+            <% bookings.forEach(function(b) { %>
+              <% var checkIn = new Date(b.check_in); checkIn.setHours(0,0,0,0); %>
+              <% var checkOut = new Date(b.check_out); checkOut.setHours(0,0,0,0); %>
+              <% var status = today >= checkIn && today <= checkOut ? 'active' : (today < checkIn ? 'upcoming' : 'past'); %>
+              <tr>
+                <td><%= b.guest_name || '—' %></td>
+                <td><%= checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                <td><%= checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                <td>
+                  <span class="booking-status booking-<%= status %>">
+                    <%= status === 'active' ? 'Active' : (status === 'upcoming' ? 'Upcoming' : 'Past') %>
+                  </span>
+                </td>
+                <td style="font-size: 12px; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= b.notes || '' %></td>
+                <td>
+                  <form method="POST" action="/admin/listings/<%= listing.id %>/bookings/<%= b.id %>/delete" style="display: inline;" onsubmit="return confirm('Remove this booking?')">
+                    <button type="submit" class="btn-remove-booking">Remove</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <% } else { %>
+        <p class="no-bookings">No bookings yet.</p>
+        <% } %>
+
+        <!-- Add new booking -->
+        <form method="POST" action="/admin/listings/<%= listing.id %>/bookings" class="add-booking-row">
+          <div class="form-group">
+            <label for="guest_name">Guest Name</label>
+            <input type="text" id="guest_name" name="guest_name" placeholder="e.g. John Doe">
+          </div>
+          <div class="form-group">
+            <label for="check_in">Check In</label>
+            <input type="date" id="check_in" name="check_in" required>
+          </div>
+          <div class="form-group">
+            <label for="check_out">Check Out</label>
+            <input type="date" id="check_out" name="check_out" required>
+          </div>
+          <button type="submit" class="btn-add-booking">Add</button>
+        </form>
+      </div>
+    </div>
+    <% } %>
+
+  </main>
+
+  <script>
+  (function() {
+    var unifiedContainer = document.getElementById('unified-images');
+    var fileInput = document.getElementById('image_files');
+    var gdriveInput = document.getElementById('gdrive-url');
+    var gdriveError = document.getElementById('gdrive-error');
+    var imageOrderInput = document.getElementById('image_order');
+    var pendingFiles = [];
+
+    // ========================================
+    // 1. GOOGLE DRIVE LINK PARSING
+    // ========================================
+    window.addGoogleDriveImage = function() {
+      var url = gdriveInput.value.trim();
+      gdriveError.style.display = 'none';
+
+      if (!url) {
+        showGdriveError('Please paste a Google Drive link.');
+        return;
+      }
+
+      // Check if it's a folder link
+      var folderId = extractGoogleDriveFolderId(url);
+      if (folderId) {
+        addGoogleDriveFolder(folderId);
+        return;
+      }
+
+      var fileId = extractGoogleDriveId(url);
+      if (!fileId) {
+        showGdriveError('Invalid Google Drive link. Use a file or folder link.');
+        return;
+      }
+
+      var directUrl = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w2000';
+
+      // Check for duplicates
+      var existing = unifiedContainer.querySelectorAll('.image-preview[data-url]');
+      for (var i = 0; i < existing.length; i++) {
+        if (existing[i].getAttribute('data-url') === directUrl) {
+          showGdriveError('This image has already been added.');
+          return;
+        }
+      }
+
+      var div = createImageTile(directUrl, 'gdrive', directUrl);
+      unifiedContainer.appendChild(div);
+      gdriveInput.value = '';
+      updateHeroBadge();
+      initDragOnTile(div);
+    };
+
+    function addGoogleDriveFolder(folderId) {
+      gdriveError.style.display = 'none';
+      gdriveInput.disabled = true;
+      gdriveInput.placeholder = 'Loading folder images...';
+
+      fetch('/admin/api/drive-folder/' + folderId)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          gdriveInput.disabled = false;
+          gdriveInput.placeholder = 'Paste Google Drive sharing link...';
+
+          if (data.error) {
+            showGdriveError(data.error);
+            return;
+          }
+
+          if (!data.images || data.images.length === 0) {
+            showGdriveError('No images found in this folder. Make sure the folder is publicly shared.');
+            return;
+          }
+
+          var added = 0;
+          data.images.forEach(function(img) {
+            // Check for duplicates
+            var isDuplicate = false;
+            var existing = unifiedContainer.querySelectorAll('.image-preview[data-url]');
+            for (var i = 0; i < existing.length; i++) {
+              if (existing[i].getAttribute('data-url') === img.url) {
+                isDuplicate = true;
+                break;
+              }
+            }
+            if (!isDuplicate) {
+              var div = createImageTile(img.url, 'gdrive', img.url);
+              unifiedContainer.appendChild(div);
+              initDragOnTile(div);
+              added++;
+            }
+          });
+
+          updateHeroBadge();
+          gdriveInput.value = '';
+          if (added > 0) {
+            showGdriveError(added + ' image' + (added > 1 ? 's' : '') + ' added from folder.');
+            gdriveError.style.color = '#166534';
+          } else {
+            showGdriveError('All images from this folder were already added.');
+          }
+        })
+        .catch(function() {
+          gdriveInput.disabled = false;
+          gdriveInput.placeholder = 'Paste Google Drive sharing link...';
+          showGdriveError('Failed to load folder. Make sure it is publicly shared.');
+        });
+    }
+
+    function extractGoogleDriveFolderId(url) {
+      var match = url.match(/drive\.google\.com\/drive\/folders\/([a-zA-Z0-9_-]+)/);
+      if (match) return match[1];
+      return null;
+    }
+
+    function extractGoogleDriveId(url) {
+      var match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) return match[1];
+      match = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+      if (match) return match[1];
+      match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && url.indexOf('drive.google.com') !== -1) return match[1];
+      return null;
+    }
+
+    function showGdriveError(msg) {
+      gdriveError.textContent = msg;
+      gdriveError.style.display = 'block';
+    }
+
+    // Allow Enter key to add Google Drive image
+    gdriveInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.addGoogleDriveImage();
+      }
+    });
+
+    // ========================================
+    // 2. FILE UPLOAD PREVIEW (into unified container)
+    // ========================================
+    fileInput.addEventListener('change', function() {
+      // Remove previous file-type previews
+      unifiedContainer.querySelectorAll('.image-preview[data-type="file"]').forEach(function(el) { el.remove(); });
+      pendingFiles = Array.from(this.files);
+
+      pendingFiles.forEach(function(file, index) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var div = createImageTile(e.target.result, 'file', null);
+          div.setAttribute('data-file-index', index);
+          unifiedContainer.appendChild(div);
+          updateHeroBadge();
+          initDragOnTile(div);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // ========================================
+    // 3. SHARED HELPERS
+    // ========================================
+    function createImageTile(imgSrc, type, url) {
+      var div = document.createElement('div');
+      div.className = 'image-preview';
+      div.draggable = true;
+      div.setAttribute('data-type', type);
+      if (url) div.setAttribute('data-url', url);
+
+      var img = document.createElement('img');
+      img.src = imgSrc;
+      img.alt = 'Image preview';
+      // Show error badge if image fails to load (e.g. Drive not shared)
+      img.onerror = function() {
+        var badge = div.querySelector('.image-error-badge');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'image-error-badge';
+          badge.textContent = 'Not shared?';
+          badge.title = 'This image could not be loaded. Make sure the Google Drive file is publicly shared.';
+          div.appendChild(badge);
+        }
+      };
+      div.appendChild(img);
+
+      // For existing and gdrive types, add hidden input
+      if (type === 'existing' || type === 'gdrive') {
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'existing_images';
+        hidden.value = url;
+        div.appendChild(hidden);
+      }
+
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-image';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.onclick = function() { removeImage(this); };
+      div.appendChild(removeBtn);
+
+      return div;
+    }
+
+    window.removeImage = function(btn) {
+      btn.parentElement.remove();
+      updateHeroBadge();
+    };
+
+    function updateHeroBadge() {
+      // Remove all existing hero badges
+      unifiedContainer.querySelectorAll('.image-hero-badge').forEach(function(b) { b.remove(); });
+      // Add badge to first image
+      var first = unifiedContainer.querySelector('.image-preview');
+      if (first) {
+        var badge = document.createElement('span');
+        badge.className = 'image-hero-badge';
+        badge.textContent = 'Hero';
+        first.appendChild(badge);
+      }
+    }
+
+    // ========================================
+    // 4. DRAG AND DROP REORDERING
+    // ========================================
+    var draggedTile = null;
+
+    function initDragOnTile(tile) {
+      tile.addEventListener('dragstart', handleDragStart);
+      tile.addEventListener('dragend', handleDragEnd);
+      tile.addEventListener('dragover', handleDragOver);
+      tile.addEventListener('dragenter', handleDragEnter);
+      tile.addEventListener('dragleave', handleDragLeave);
+      tile.addEventListener('drop', handleDrop);
+    }
+
+    function handleDragStart(e) {
+      draggedTile = this;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      unifiedContainer.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+      draggedTile = null;
+      updateHeroBadge();
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDragEnter(e) {
+      e.preventDefault();
+      if (this !== draggedTile) {
+        this.classList.add('drag-over');
+      }
+    }
+
+    function handleDragLeave() {
+      this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      if (draggedTile && draggedTile !== this) {
+        var allTiles = Array.from(unifiedContainer.querySelectorAll('.image-preview'));
+        var draggedIndex = allTiles.indexOf(draggedTile);
+        var dropIndex = allTiles.indexOf(this);
+        if (draggedIndex < dropIndex) {
+          unifiedContainer.insertBefore(draggedTile, this.nextSibling);
+        } else {
+          unifiedContainer.insertBefore(draggedTile, this);
+        }
+      }
+      updateHeroBadge();
+    }
+
+    // Initialize drag on server-rendered tiles
+    unifiedContainer.querySelectorAll('.image-preview').forEach(initDragOnTile);
+
+    // ========================================
+    // 5. FORM SUBMISSION: BUILD image_order
+    // ========================================
+    document.querySelector('form').addEventListener('submit', function() {
+      var tiles = unifiedContainer.querySelectorAll('.image-preview');
+      var order = [];
+      tiles.forEach(function(tile) {
+        var type = tile.getAttribute('data-type');
+        if (type === 'existing' || type === 'gdrive') {
+          order.push(tile.getAttribute('data-url'));
+        } else if (type === 'file') {
+          order.push('file:' + tile.getAttribute('data-file-index'));
+        }
+      });
+      imageOrderInput.value = JSON.stringify(order);
+    });
+
+    // ========================================
+    // 6. AUTO-FILL TRANSIT FROM ADDRESS (checkbox)
+    // ========================================
+    window.handleTransitCheckbox = function(checkbox) {
+      var addressInput = document.getElementById('address');
+      var transitTextarea = document.getElementById('transit');
+      var statusDiv = document.getElementById('transit-status');
+      var address = addressInput ? addressInput.value.trim() : '';
+
+      if (!checkbox.checked) {
+        statusDiv.style.display = 'none';
+        return;
+      }
+
+      if (!address) {
+        statusDiv.textContent = 'Enter a Full Address first.';
+        statusDiv.style.color = '#b91c1c';
+        statusDiv.style.display = 'inline';
+        checkbox.checked = false;
+        return;
+      }
+
+      // Show loading
+      statusDiv.textContent = 'Looking up...';
+      statusDiv.style.color = 'var(--muted)';
+      statusDiv.style.display = 'inline';
+
+      fetch('/api/transit?address=' + encodeURIComponent(address))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.transit) {
+            transitTextarea.value = data.transit;
+            statusDiv.textContent = '✓ Found ' + data.stations + ' station' + (data.stations !== 1 ? 's' : '');
+            statusDiv.style.color = '#166534';
+          } else {
+            statusDiv.textContent = data.message || 'No stations found.';
+            statusDiv.style.color = '#b91c1c';
+            checkbox.checked = false;
+          }
+        })
+        .catch(function() {
+          statusDiv.textContent = 'Lookup failed.';
+          statusDiv.style.color = '#b91c1c';
+          checkbox.checked = false;
+        });
+    };
+  })();
+
+  // ========================================
+  // FLOOR PLAN: Google Drive + Remove
+  // ========================================
+  window.addFloorPlanFromDrive = function() {
+    var input = document.getElementById('gdrive-floorplan-url');
+    var errorDiv = document.getElementById('gdrive-floorplan-error');
+    var url = input.value.trim();
+    errorDiv.textContent = '';
+
+    if (!url) { errorDiv.textContent = 'Please paste a Google Drive link.'; return; }
+
+    var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) { errorDiv.textContent = 'Invalid Google Drive link.'; return; }
+
+    var directUrl = 'https://drive.google.com/thumbnail?id=' + match[1] + '&sz=w2000';
+
+    // Set the floor plan URL input
+    document.getElementById('floor_plan_image').value = directUrl;
+
+    // Show preview
+    var preview = document.getElementById('floor-plan-preview');
+    preview.innerHTML = '<div class="image-preview" style="display: inline-block;">' +
+      '<img src="' + directUrl + '" alt="Floor plan">' +
+      '<button type="button" class="remove-image" onclick="removeFloorPlan()">&times;</button>' +
+      '</div>';
+
+    input.value = '';
+  };
+
+  window.removeFloorPlan = function() {
+    document.getElementById('floor-plan-preview').innerHTML = '';
+    document.getElementById('floor_plan_image').value = '';
+  };
+
+  // Floor plan file upload preview
+  var fpFileInput = document.getElementById('floor_plan_file');
+  if (fpFileInput) {
+    fpFileInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var preview = document.getElementById('floor-plan-preview');
+          preview.innerHTML = '<div class="image-preview" style="display: inline-block;">' +
+            '<img src="' + e.target.result + '" alt="Floor plan">' +
+            '<button type="button" class="remove-image" onclick="removeFloorPlan(); document.getElementById(\'floor_plan_file\').value=\'\';">&times;</button>' +
+            '</div>';
+          // Clear URL input since we're using file upload
+          document.getElementById('floor_plan_image').value = '';
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+  }
+  </script>
+</body>
+</html>

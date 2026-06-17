@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply — Hive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #1a1a18;
+  --cream: #f5f2ed;
+  --warm: #e8e3db;
+  --stone: #c4bdb3;
+  --muted: #8a8378;
+  --accent: #d4920b;
+  --accent-dark: #b87d09;
+  --accent-text: #9a6f08;
+  --white: #fefdfb;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', -apple-system, sans-serif;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--white);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.container { max-width: 1280px; margin: 0 auto; padding: 0 clamp(24px, 5vw, 80px); }
+
+/* ===== NAV ===== */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 20px 0;
+  background: rgba(254,253,251,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: none;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav .container {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+}
+.nav-logo svg { flex-shrink: 0; }
+.nav-logo .logo-text { display: flex; flex-direction: column; line-height: 1; }
+.nav-logo .logo-name {
+  font-family: var(--sans); font-weight: 700; font-size: 1.15rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
+}
+.nav-logo .logo-tag {
+  font-family: var(--sans); font-size: 0.48rem; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3px;
+  color: var(--ink); opacity: 0.5;
+}
+.nav-links { display: flex; gap: 36px; align-items: center; }
+.nav-links a {
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.nav-links a:hover { color: var(--accent-text); }
+.nav-cta {
+  font-size: 0.78rem !important;
+  padding: 10px 24px;
+  border: 1px solid var(--accent-text) !important;
+  color: var(--accent-text) !important;
+  transition: all 0.3s !important;
+}
+.nav-mobile { display: none; background: none; border: none; cursor: pointer; }
+.nav-mobile span {
+  display: block; width: 24px; height: 1.5px; background: var(--ink);
+  margin: 6px 0; transition: all 0.3s;
+}
+
+/* ===== PAGE HEADER ===== */
+.page-header {
+  padding-top: clamp(140px, 16vh, 200px);
+  padding-bottom: clamp(48px, 6vw, 80px);
+  background: var(--ink);
+  position: relative;
+  overflow: hidden;
+}
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(230,210,0,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 70%, rgba(230,210,0,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.page-header .container { position: relative; z-index: 2; }
+.section-tag {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 24px;
+}
+.section-tag::before {
+  content: '';
+  width: 32px; height: 1px;
+  background: var(--accent-text);
+}
+.page-header .section-tag { color: var(--accent); }
+.page-header .section-tag::before { background: var(--accent); }
+.page-header h1 {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 4.5vw, 4rem);
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--white);
+}
+.page-header h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.page-header p {
+  font-size: 1rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  margin-top: 16px;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+/* ===== APPLICATION FORM ===== */
+.apply-section {
+  padding: clamp(60px, 8vw, 100px) 0;
+}
+.apply-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.apply-inner h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 300;
+  line-height: 1.2;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.apply-inner h2 em { font-style: italic; color: var(--accent-text); }
+.apply-intro {
+  font-size: 0.92rem;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+.apply-form { display: flex; flex-direction: column; gap: 28px; }
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.form-group label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-group label .required {
+  color: var(--accent-text);
+}
+.form-group input,
+.form-group textarea {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 14px 16px;
+  border: 1px solid var(--warm);
+  background: var(--white);
+  transition: border-color 0.3s;
+  outline: none;
+  border-radius: 0;
+}
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: var(--accent-text);
+}
+.form-group textarea {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--stone);
+  font-weight: 300;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.apply-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 40px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--accent);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+  align-self: flex-start;
+}
+.apply-submit:hover {
+  background: var(--accent-dark);
+}
+
+/* ===== SUCCESS MESSAGE ===== */
+.apply-success {
+  text-align: center;
+  padding: 60px 0;
+}
+.apply-success h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 300;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.apply-success p {
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto 32px;
+}
+.apply-success a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--accent);
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  padding: clamp(48px, 6vw, 80px) 0 40px;
+  background: var(--ink);
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.footer-brand p {
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.35);
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+.footer-col h4 {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 24px;
+}
+.footer-col a {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.35);
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.3s;
+}
+.footer-col a:hover { color: var(--accent); }
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 32px;
+}
+.footer-bottom p {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.25);
+}
+.footer-bottom a {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(255,255,255,0.25);
+  text-decoration: none;
+}
+.footer .nav-logo .logo-name { color: #fefdfb; }
+.footer .nav-logo .logo-tag { color: #fefdfb; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-mobile { display: block; }
+  .form-row { grid-template-columns: 1fr; }
+  .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .apply-submit { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="container">
+    <a href="/" class="nav-logo">
+              <svg width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+    <div class="nav-links">
+      <a href="/properties">Properties</a>
+      <a href="/partners">For Landlords</a>
+      <a href="/#about">About</a>
+      <a href="/partners/apply" class="nav-cta">Inquire</a>
+    </div>
+    <button class="nav-mobile" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<section class="page-header">
+  <div class="container">
+    <div class="section-tag">Apply</div>
+    <h1>Start Your <em>Application.</em></h1>
+    <p>Tell us a little about yourself and we'll be in touch shortly to get you set up in your new home.</p>
+  </div>
+</section>
+
+<!-- APPLICATION FORM -->
+<section class="apply-section">
+  <div class="container">
+    <div class="apply-inner">
+      <% if (typeof success !== 'undefined' && success) { %>
+      <div class="apply-success">
+        <h2>Application <em>Received.</em></h2>
+        <p>Thank you for your interest in Hive. We'll review your application and get back to you shortly.</p>
+        <a href="/properties">Browse Properties <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg></a>
+      </div>
+      <% } else { %>
+      <h2>Tell Us About <em>Yourself.</em></h2>
+      <p class="apply-intro">Fill out the form below and our team will reach out to help you find the perfect home.</p>
+      <form class="apply-form" action="/apply" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name <span class="required">*</span></label>
+            <input type="text" name="full_name" placeholder="Your full name" required>
+          </div>
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" name="email" placeholder="you@email.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" name="phone" placeholder="(555) 123-4567">
+        </div>
+        <div class="form-group">
+          <label>Please tell us a little bit about yourself <span class="required">*</span></label>
+          <textarea name="about" placeholder="What brings you to Hive? Tell us about your living situation, what you're looking for, and when you're hoping to move in." required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Please share your social media / LinkedIn <span class="required">*</span></label>
+          <input type="text" name="social_media" placeholder="https://linkedin.com/in/yourname" required>
+        </div>
+        <button type="submit" class="apply-submit">
+          Submit Application
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
+        </button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo">
+              <svg width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+              <div class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></div>
+            </a>
+        <p>Move-in ready, fully furnished with flexible lease terms. No broker fees, no guarantors required, no hidden fees.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Residences</h4>
+        <a href="#">New York</a>
+        <a href="#">Los Angeles</a>
+        <a href="#">Chicago</a>
+        <a href="#">Miami</a>
+        <a href="/properties">All Properties</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#about">About Us</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="/partners/apply">Contact Us</a>
+        <a href="#">FAQ</a>
+        <a href="/partners">Partner With Us</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Privacy Policy</a>
+        <a href="/admin/login">Admin Login</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Hive. All rights reserved.</p>
+      <a href="#">hello@hiveny.com</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Mobile nav toggle
+const navMobile = document.querySelector('.nav-mobile');
+const navLinks = document.querySelector('.nav-links');
+if (navMobile) {
+  navMobile.addEventListener('click', () => {
+    if (navLinks.style.display === 'flex') {
+      navLinks.style.display = 'none';
+    } else {
+      navLinks.style.display = 'flex';
+      navLinks.style.position = 'absolute';
+      navLinks.style.top = '100%';
+      navLinks.style.left = '0';
+      navLinks.style.right = '0';
+      navLinks.style.background = 'rgba(254,253,251,0.98)';
+      navLinks.style.flexDirection = 'column';
+      navLinks.style.padding = '24px clamp(24px, 5vw, 80px)';
+      navLinks.style.gap = '20px';
+    }
+  });
+}
+</script>
+</body>
+</html>

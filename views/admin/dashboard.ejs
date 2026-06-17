@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Admin - Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a18;
+      --cream: #f5f2ed;
+      --accent: #d4920b;
+      --accent-dark: #b87d09;
+      --white: #fefdfb;
+      --muted: #8a8378;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* --- Nav Bar --- */
+    .admin-nav {
+      background: var(--ink);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 56px;
+    }
+
+    .admin-nav-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--white);
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+
+    .admin-nav-brand span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-left: 10px;
+    }
+
+    .admin-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .admin-nav-right .admin-greeting {
+      color: #b0ada6;
+    }
+
+    .admin-nav-right a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .admin-nav-right a:hover {
+      color: var(--accent-dark);
+    }
+
+    /* --- Admin Tabs --- */
+    .admin-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--white);
+      border-bottom: 1px solid #e0ddd7;
+      padding: 0 32px;
+    }
+    .admin-tab {
+      padding: 14px 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .admin-tab:hover { color: var(--ink); }
+    .admin-tab.active {
+      color: var(--ink);
+      font-weight: 600;
+      border-bottom-color: var(--accent);
+    }
+
+    /* --- Main Content --- */
+    .admin-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .admin-header h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 10px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--ink);
+      color: var(--white);
+      text-decoration: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #333330;
+    }
+
+    /* --- Success Message --- */
+    .success-message {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* --- Column Filters --- */
+    .filter-row th {
+      padding: 6px 16px 10px;
+      background: #f8f6f2;
+      border-bottom: 1px solid #e0ddd7;
+    }
+
+    .filter-row input,
+    .filter-row select {
+      width: 100%;
+      padding: 6px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      border: 1px solid #d4d0c8;
+      border-radius: 4px;
+      background: var(--white);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-row input:focus,
+    .filter-row select:focus {
+      border-color: var(--accent-dark);
+      box-shadow: 0 0 0 2px rgba(212, 146, 11, 0.15);
+    }
+
+    .filter-row select {
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 26px;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238a8378' stroke-width='1.2'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    /* --- Table --- */
+    .listings-table-wrapper {
+      background: var(--white);
+      border: 1px solid #e0ddd7;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(26, 26, 24, 0.04);
+    }
+
+    .listings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .listings-table thead {
+      background: #f8f6f2;
+    }
+
+    .listings-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid #e0ddd7;
+    }
+
+    .listings-table th.th-drag {
+      width: 36px;
+      padding: 12px 8px 12px 16px;
+    }
+
+    .listings-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #eceae5;
+      vertical-align: middle;
+    }
+
+    .listings-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .listings-table tbody tr:hover {
+      background: #faf9f6;
+      cursor: pointer;
+    }
+
+    /* --- Drag Handle --- */
+    .drag-handle {
+      cursor: grab;
+      color: #c4c0b8;
+      font-size: 16px;
+      padding: 4px 4px 4px 0;
+      user-select: none;
+      transition: color 0.2s;
+    }
+
+    .drag-handle:hover {
+      color: var(--ink);
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    /* --- Drag States --- */
+    .listings-table tbody tr.dragging {
+      opacity: 0.4;
+      background: #f8f6f2;
+    }
+
+    .listings-table tbody tr.drag-over-top {
+      box-shadow: inset 0 2px 0 0 var(--accent-dark);
+    }
+
+    .listings-table tbody tr.drag-over-bottom {
+      box-shadow: inset 0 -2px 0 0 var(--accent-dark);
+    }
+
+    /* --- Status Badges --- */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .status-available {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-coming_soon {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    .status-rented {
+      background: #f1f0ec;
+      color: #6b6860;
+    }
+
+    .status-just_listed {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* --- Featured Indicator --- */
+    .featured-yes {
+      color: var(--accent-dark);
+      font-weight: 600;
+    }
+
+    .featured-no {
+      color: #c4c0b8;
+    }
+
+    /* --- Action Buttons --- */
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-edit {
+      display: inline-block;
+      padding: 5px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink);
+      background: #f1f0ec;
+      text-decoration: none;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-edit:hover {
+      background: #e0ddd7;
+    }
+
+    .btn-delete {
+      display: inline-block;
+      padding: 5px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #b91c1c;
+      background: #fef2f2;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #fecaca;
+    }
+
+    .delete-form {
+      display: inline;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* --- Empty State --- */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .empty-state p {
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+
+    /* --- Price Formatting --- */
+    .price-cell {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--ink);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* --- No Results --- */
+    .no-results {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+      font-size: 14px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav Bar -->
+  <nav class="admin-nav">
+    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
+    <div class="admin-nav-right">
+      <span class="admin-greeting">Hello, <%= adminName %></span>
+      <a href="/admin/logout">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <a href="/admin/dashboard" class="admin-tab active">Listings</a>
+    <a href="/admin/bookings" class="admin-tab">Bookings</a>
+    <a href="/admin/applications" class="admin-tab">Applications</a>
+    <a href="/admin/landlord-inquiries" class="admin-tab">Landlord Inquiries</a>
+  </div>
+
+  <!-- Main Content -->
+  <main class="admin-content">
+    <div class="admin-header">
+      <h2>Listings</h2>
+      <a href="/admin/listings/new" class="btn-primary">+ Add New Listing</a>
+    </div>
+
+    <% if (success) { %>
+      <div class="success-message"><%= success %></div>
+    <% } %>
+
+    <% if (listings.length === 0) { %>
+      <div class="listings-table-wrapper">
+        <div class="empty-state">
+          <p>No listings yet. Add your first property to get started.</p>
+          <a href="/admin/listings/new" class="btn-primary">+ Add New Listing</a>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="listings-table-wrapper">
+        <table class="listings-table" id="listings-table">
+          <thead>
+            <tr>
+              <th class="th-drag"></th>
+              <th>Title</th>
+              <th>Location</th>
+              <th>Bed</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Featured on Site</th>
+              <th>Actions</th>
+            </tr>
+            <tr class="filter-row">
+              <th></th>
+              <th><input type="text" id="search-input" placeholder="Search..."></th>
+              <th>
+                <select id="filter-location">
+                  <option value="">All</option>
+                  <option value="New York">New York</option>
+                  <option value="Los Angeles">Los Angeles</option>
+                  <option value="Chicago">Chicago</option>
+                  <option value="Miami">Miami</option>
+                  <option value="San Francisco">San Francisco</option>
+                  <option value="Washington DC">Washington DC</option>
+                  <option value="Boston">Boston</option>
+                  <option value="Seattle">Seattle</option>
+                  <option value="Austin">Austin</option>
+                  <option value="Denver">Denver</option>
+                  <option value="Nashville">Nashville</option>
+                  <option value="Atlanta">Atlanta</option>
+                </select>
+              </th>
+              <th>
+                <select id="filter-bed">
+                  <option value="">All</option>
+                  <option value="0">Studio</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4+</option>
+                </select>
+              </th>
+              <th></th>
+              <th>
+                <select id="filter-status">
+                  <option value="">All</option>
+                  <option value="available">Available</option>
+                  <option value="just_listed">Just Listed</option>
+                  <option value="coming_soon">Coming Soon</option>
+                  <option value="rented">Rented</option>
+                </select>
+              </th>
+              <th>
+                <select id="filter-featured">
+                  <option value="">All</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="listings-tbody">
+            <% listings.forEach(function(listing) { %>
+              <tr data-id="<%= listing.id %>" data-title="<%= listing.title.toLowerCase() %>" data-location="<%= listing.location || 'New York' %>" data-status="<%= listing.status %>" data-bed="<%= listing.bedrooms %>" data-featured="<%= listing.featured ? 'yes' : 'no' %>" draggable="true">
+                <td><span class="drag-handle" title="Drag to reorder">⠿</span></td>
+                <td><strong><%= listing.title %></strong></td>
+                <td><%= listing.location || 'New York' %></td>
+                <td><%= listing.bedrooms === 0 ? 'Studio' : listing.bedrooms %></td>
+                <td class="price-cell">$<%= listing.price_monthly ? listing.price_monthly.toLocaleString() : '0' %>/mo</td>
+                <td>
+                  <span class="status-badge status-<%= listing.status %>">
+                    <%= listing.status === 'coming_soon' ? 'Coming Soon' : listing.status === 'just_listed' ? 'Just Listed' : listing.status %>
+                  </span>
+                </td>
+                <td>
+                  <% if (listing.featured) { %>
+                    <span class="featured-yes">Yes</span>
+                  <% } else { %>
+                    <span class="featured-no">No</span>
+                  <% } %>
+                </td>
+                <td>
+                  <div class="actions">
+                    <a href="/admin/listings/<%= listing.id %>/edit" class="btn-edit">Edit</a>
+                    <form class="delete-form" method="POST" action="/admin/listings/<%= listing.id %>/delete" onsubmit="return confirm('Are you sure you want to delete this listing?');">
+                      <button type="submit" class="btn-delete">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <div class="no-results" id="no-results">No listings match your filters.</div>
+      </div>
+    <% } %>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // --- Toast ---
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2000);
+  }
+
+  // --- Row Click to Edit ---
+  document.querySelectorAll('#listings-tbody tr').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      // Don't navigate if clicking delete button, drag handle, or form
+      if (e.target.closest('.btn-delete') || e.target.closest('.delete-form') || e.target.closest('.drag-handle')) return;
+      var id = row.dataset.id;
+      if (id) window.location.href = '/admin/listings/' + id + '/edit';
+    });
+  });
+
+  // --- Filter / Search ---
+  var searchInput = document.getElementById('search-input');
+  var filterLocation = document.getElementById('filter-location');
+  var filterStatus = document.getElementById('filter-status');
+  var filterBed = document.getElementById('filter-bed');
+  var filterFeatured = document.getElementById('filter-featured');
+
+  function runFilter() {
+    if (!searchInput) return;
+    var query = searchInput.value.toLowerCase();
+    var loc = filterLocation.value;
+    var status = filterStatus.value;
+    var bed = filterBed.value;
+    var featured = filterFeatured.value;
+    var rows = document.querySelectorAll('#listings-tbody tr');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+      var matchTitle = !query || row.dataset.title.indexOf(query) !== -1;
+      var matchLoc = !loc || row.dataset.location === loc;
+      var matchStatus = !status || row.dataset.status === status;
+      var matchBed = !bed || (bed === '4' ? parseInt(row.dataset.bed) >= 4 : row.dataset.bed === bed);
+      var matchFeatured = !featured || row.dataset.featured === featured;
+
+      if (matchTitle && matchLoc && matchStatus && matchBed && matchFeatured) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    var noResults = document.getElementById('no-results');
+    if (noResults) {
+      noResults.style.display = visible === 0 ? 'block' : 'none';
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', runFilter);
+    filterLocation.addEventListener('change', runFilter);
+    filterStatus.addEventListener('change', runFilter);
+    filterBed.addEventListener('change', runFilter);
+    filterFeatured.addEventListener('change', runFilter);
+  }
+
+  // --- Drag and Drop ---
+  var tbody = document.getElementById('listings-tbody');
+  var dragRow = null;
+
+  if (tbody) {
+    tbody.addEventListener('dragstart', function(e) {
+      var row = e.target.closest('tr');
+      if (!row) return;
+      dragRow = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', row.dataset.id);
+    });
+
+    tbody.addEventListener('dragend', function(e) {
+      var row = e.target.closest('tr');
+      if (row) row.classList.remove('dragging');
+      clearDragOver();
+      dragRow = null;
+    });
+
+    tbody.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      var targetRow = e.target.closest('tr');
+      if (!targetRow || targetRow === dragRow) return;
+
+      clearDragOver();
+
+      var rect = targetRow.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+
+      if (e.clientY < midY) {
+        targetRow.classList.add('drag-over-top');
+      } else {
+        targetRow.classList.add('drag-over-bottom');
+      }
+    });
+
+    tbody.addEventListener('dragleave', function(e) {
+      var targetRow = e.target.closest('tr');
+      if (targetRow) {
+        targetRow.classList.remove('drag-over-top', 'drag-over-bottom');
+      }
+    });
+
+    tbody.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var targetRow = e.target.closest('tr');
+      if (!targetRow || !dragRow || targetRow === dragRow) {
+        clearDragOver();
+        return;
+      }
+
+      var rect = targetRow.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+
+      if (e.clientY < midY) {
+        tbody.insertBefore(dragRow, targetRow);
+      } else {
+        tbody.insertBefore(dragRow, targetRow.nextSibling);
+      }
+
+      clearDragOver();
+      dragRow.classList.remove('dragging');
+      saveOrder();
+    });
+  }
+
+  function clearDragOver() {
+    document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(function(el) {
+      el.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+  }
+
+  function saveOrder() {
+    var rows = document.querySelectorAll('#listings-tbody tr');
+    var order = [];
+    rows.forEach(function(row, i) {
+      order.push({ id: parseInt(row.dataset.id), sort_order: i });
+    });
+
+    fetch('/admin/listings/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: order })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('Order saved');
+      } else {
+        showToast('Failed to save order');
+      }
+    })
+    .catch(function() {
+      showToast('Failed to save order');
+    });
+  }
+  </script>
+</body>
+</html>
