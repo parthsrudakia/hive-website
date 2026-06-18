@@ -1351,7 +1351,7 @@ span.flatpickr-weekday {
           <div class="hero-stat-divider"></div>
           <div class="hero-stat">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z"/><path d="M4 12V7a4 4 0 014-4h0a4 4 0 014 4v5"/><path d="M6 19v2m12-2v2"/></svg>
-            <span><%= listing.bathrooms %> Bath</span>
+            <span><%= parseFloat(listing.bathrooms) %> Bath</span>
           </div>
           <% if (listing.sqft) { %>
           <div class="hero-stat-divider"></div>
