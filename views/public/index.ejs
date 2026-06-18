@@ -164,13 +164,18 @@ body {
   padding-bottom: clamp(60px, 10vh, 120px);
   overflow: hidden;
 }
-.hero-bg {
+.hero-bg { position: absolute; inset: 0; background-color: #1a1a18; z-index: 0; }
+.hero-slide {
   position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 1.4s ease-in-out;
+}
+.hero-slide.is-active { opacity: 1; }
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
     linear-gradient(180deg, rgba(20,18,16,0.62) 0%, rgba(20,18,16,0.34) 42%, rgba(20,18,16,0.92) 100%),
-    linear-gradient(90deg, rgba(20,18,16,0.45) 0%, rgba(20,18,16,0) 55%),
-    url('/images/hero.jpg') center/cover no-repeat;
-  background-color: #1a1a18;
+    linear-gradient(90deg, rgba(20,18,16,0.45) 0%, rgba(20,18,16,0) 55%);
 }
 .hero .container { position: relative; z-index: 2; width: 100%; }
 .hero-tag {
@@ -259,6 +264,7 @@ body {
   position: absolute;
   right: clamp(24px, 5vw, 80px);
   bottom: clamp(60px, 10vh, 120px);
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -1632,7 +1638,13 @@ body {
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-bg"></div>
+  <div class="hero-bg">
+    <div class="hero-slide is-active" style="background-image:url('/images/hero-1.jpg')"></div>
+    <div class="hero-slide" style="background-image:url('/images/hero-2.jpg')"></div>
+    <div class="hero-slide" style="background-image:url('/images/hero-3.jpg')"></div>
+    <div class="hero-slide" style="background-image:url('/images/hero-4.jpg')"></div>
+  </div>
+  <div class="hero-overlay"></div>
   <div class="container">
     <h1>Flexible Living,<br><em>Redefined.</em></h1>
     <p class="hero-sub">Move-in ready, fully furnished with flexible lease terms.<br>No broker fees, no guarantors required, no hidden fees.</p>
@@ -1659,6 +1671,20 @@ body {
     </div>
   </div>
 </section>
+
+<script>
+  // Rotate hero background images with a cross-fade
+  (function () {
+    var slides = document.querySelectorAll('.hero .hero-slide');
+    if (slides.length < 2) return;
+    var i = 0;
+    setInterval(function () {
+      slides[i].classList.remove('is-active');
+      i = (i + 1) % slides.length;
+      slides[i].classList.add('is-active');
+    }, 6000);
+  })();
+</script>
 
 <!-- MARQUEE -->
 <div class="marquee-section">
