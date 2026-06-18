@@ -38,8 +38,8 @@ router.get('/properties', async (req, res) => {
     );
     // Convert deprecated Drive uc?export URLs to thumbnail format
     listings.forEach(l => { if (l.images) l.images = l.images.map(url => {
-      const m = url && url.match(/drive\.google\.com\/uc\?export=view&id=([a-zA-Z0-9_-]+)/);
-      return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w2000` : url;
+      const m = url && url.match(/drive\.google\.com\/(?:uc\?export=view&id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/);
+      return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w2000` : url;
     }); });
     res.render('public/properties', { listings });
   } catch (err) {

@@ -251,8 +251,8 @@ router.get('/listings/:id/edit', requireAdmin, async (req, res) => {
     // Convert deprecated Drive uc?export URLs to thumbnail format
     const fixUrl = (url) => {
       if (!url) return url;
-      const m = url.match(/drive\.google\.com\/uc\?export=view&id=([a-zA-Z0-9_-]+)/);
-      return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w2000` : url;
+      const m = url.match(/drive\.google\.com\/(?:uc\?export=view&id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/);
+      return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w2000` : url;
     };
     const listing = rows[0];
     if (listing.images) listing.images = listing.images.map(fixUrl);
@@ -511,7 +511,7 @@ router.get('/api/drive-folder/:folderId', requireAdmin, async (req, res) => {
         const images = (data.files || []).map(file => ({
           id: file.id,
           name: file.name,
-          url: 'https://drive.google.com/thumbnail?id=' + file.id + '&sz=w2000'
+          url: 'https://lh3.googleusercontent.com/d/' + file.id + '=w2000'
         }));
         res.json({ images });
       } catch (e) {
