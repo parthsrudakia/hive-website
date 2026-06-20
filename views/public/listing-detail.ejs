@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><%= listing.title %> — Hive</title>
+<title><%= publicTitle(listing) %> — Hive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -1341,7 +1341,7 @@ span.flatpickr-weekday {
     <% } %>
     <div class="listing-header-row">
       <div class="listing-header-left">
-        <h1><%= listing.title %></h1>
+        <h1><%= publicTitle(listing) %></h1>
         <p class="listing-location"><%= listing.neighborhood %>, <%= listing.city %>, <%= listing.state %></p>
         <div class="hero-stats" style="margin-top: 12px;">
           <div class="hero-stat">
@@ -1480,7 +1480,33 @@ span.flatpickr-weekday {
         <% } %>
 
         <div class="location-map">
-          <iframe src="https://www.google.com/maps?q=<%= encodeURIComponent((listing.address || '') + ' ' + listing.neighborhood + ' ' + listing.city + ' ' + listing.state) %>&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <% if (mapsApiKey) { %>
+          <%# Approximate area only — geocodes the neighborhood (never the building) and shades a radius. %>
+          <div id="area-map" style="width:100%;height:100%;"></div>
+          <script>
+            function initAreaMap() {
+              var query = <%- JSON.stringify(((listing.neighborhood ? listing.neighborhood + ', ' : '') + listing.city + ', ' + listing.state).trim()) %>;
+              new google.maps.Geocoder().geocode({ address: query }, function (results, status) {
+                if (status !== 'OK' || !results[0]) return;
+                var center = results[0].geometry.location;
+                var map = new google.maps.Map(document.getElementById('area-map'), {
+                  center: center, zoom: 14, disableDefaultUI: true, zoomControl: true,
+                  gestureHandling: 'cooperative'
+                });
+                var circle = new google.maps.Circle({
+                  map: map, center: center, radius: 600, clickable: false,
+                  fillColor: '#d4920b', fillOpacity: 0.16,
+                  strokeColor: '#d4920b', strokeOpacity: 0.55, strokeWeight: 1.5
+                });
+                map.fitBounds(circle.getBounds());
+              });
+            }
+          </script>
+          <script async src="https://maps.googleapis.com/maps/api/js?key=<%= encodeURIComponent(mapsApiKey) %>&loading=async&callback=initAreaMap"></script>
+          <% } else { %>
+          <%# Fallback without an API key: neighborhood-level embed, address intentionally omitted. %>
+          <iframe src="https://www.google.com/maps?q=<%= encodeURIComponent(listing.neighborhood + ' ' + listing.city + ' ' + listing.state) %>&output=embed&z=14" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <% } %>
         </div>
       </div>
 
@@ -1577,7 +1603,7 @@ span.flatpickr-weekday {
         <% } else { %>
         <div class="related-card-img-placeholder"></div>
         <% } %>
-        <h3><%= r.title %></h3>
+        <h3><%= publicTitle(r) %></h3>
         <p class="related-card-meta"><%= r.neighborhood %>, <%= r.city %> &middot; <%= r.bedrooms === 0 ? 'Studio' : r.bedrooms + ' Bed' %></p>
         <p class="related-card-price">$<%= r.price_monthly.toLocaleString() %><span style="color: var(--muted); font-weight: 400;">/mo</span></p>
       </a>
@@ -1645,7 +1671,7 @@ span.flatpickr-weekday {
   <div class="floorplan-modal-inner">
     <% if (listing.floor_plan_image) { %>
     <div class="floorplan-img-wrapper" id="floorplan-wrapper">
-      <img class="floorplan-img" id="floorplan-img" src="<%= listing.floor_plan_image %>" alt="Floor plan for <%= listing.title %>" draggable="false">
+      <img class="floorplan-img" id="floorplan-img" src="<%= listing.floor_plan_image %>" alt="Floor plan for <%= publicTitle(listing) %>" draggable="false">
     </div>
     <div class="floorplan-zoom-controls">
       <button class="floorplan-zoom-btn" onclick="zoomFloorPlan(1)" aria-label="Zoom in">+</button>
@@ -1745,7 +1771,7 @@ floorplanModal.addEventListener('click', function(e) {
 // Share listing
 function shareListing() {
   var url = window.location.href;
-  var title = '<%= listing.title %> — Hive';
+  var title = '<%= publicTitle(listing) %> — Hive';
   // Try native share (mobile)
   if (navigator.share) {
     navigator.share({ title: title, url: url }).catch(function() {});

@@ -35,7 +35,14 @@ router.get('/listings', async (req, res) => {
 
     query += ` ORDER BY sort_order ASC, created_at DESC`;
 
-    const { rows: listings } = await pool.query(query, params);
+    const { rows } = await pool.query(query, params);
+    // Strip identifying fields (building name + exact address) from the public API;
+    // expose only the anonymized public title.
+    const publicTitle = req.app.locals.publicTitle;
+    const listings = rows.map(({ title, address, ...rest }) => ({
+      ...rest,
+      public_title: publicTitle ? publicTitle({ title, address, ...rest }) : undefined
+    }));
     res.json({ listings, total: listings.length });
   } catch (err) {
     console.error('Error fetching listings:', err);

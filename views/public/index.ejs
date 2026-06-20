@@ -1747,7 +1747,7 @@ body {
     <% } %>
   </div>
   <div class="fp-card-info">
-    <h3><%= listing.title %></h3>
+    <h3><%= publicTitle(listing) %></h3>
     <p class="fp-card-details">
       <% if (listing.available_from && listing.available_to) { %>
       <%= new Date(listing.available_from).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) %> – <%= new Date(listing.available_to).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) %> &nbsp;|&nbsp;

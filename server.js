@@ -53,6 +53,7 @@ app.use(session({
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS location VARCHAR(100) DEFAULT 'New York'`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS location_description TEXT`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS show_booking BOOLEAN DEFAULT TRUE`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS property_type VARCHAR(50)`,
       `CREATE TABLE IF NOT EXISTS bookings (
         id SERIAL PRIMARY KEY,
         listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -92,6 +93,30 @@ app.use(session({
     console.error('Migration warning:', err.message);
   }
 })();
+
+// Public-facing, anonymized listing title — never exposes the building name
+// (which is kept privately in `listing.title`). Deterministic per building so
+// every room in the same unit shows the same title, while different buildings
+// get different descriptors, keeping titles distinct within a city.
+app.locals.publicTitle = function (listing) {
+  if (!listing) return '';
+  const neighborhood = (listing.neighborhood && String(listing.neighborhood).trim())
+    || (listing.city && String(listing.city).trim()) || 'the city';
+  const beds = parseInt(listing.bedrooms, 10);
+  const bedLabel = (!beds || beds <= 0) ? 'Studio' : beds + 'BR';
+  const type = (listing.property_type && String(listing.property_type).trim()) || 'apartment';
+  const ADJ = ['luxury', 'modern', 'boutique', 'elegant', 'designer', 'sunlit',
+               'stylish', 'chic', 'contemporary', 'serene'];
+  const seed = String(listing.title || '') + '|' + String(listing.city || '');
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(h, 31) + seed.charCodeAt(i)) >>> 0;
+  const adj = ADJ[h % ADJ.length];
+  const article = /^[aeiou]/i.test(adj) ? 'an' : 'a';
+  return `${bedLabel} in ${article} ${adj} ${type} in ${neighborhood}`;
+};
+
+// Google Maps JS API key for the approximate-area map (empty => iframe fallback).
+app.locals.mapsApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY || '';
 
 // Routes
 app.use('/', require('./routes/public'));

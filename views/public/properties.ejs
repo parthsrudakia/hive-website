@@ -532,7 +532,7 @@ body {
           <span class="property-price">$<%= listing.price_monthly.toLocaleString() %><span> /month</span></span>
         </div>
         <div class="property-info">
-          <h3><%= listing.title %></h3>
+          <h3><%= publicTitle(listing) %></h3>
           <div class="property-meta">
             <span><%= listing.neighborhood %>, <%= listing.city %></span>
             <span class="dot"></span>

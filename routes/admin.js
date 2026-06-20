@@ -155,7 +155,7 @@ router.post('/listings', requireAdmin, upload.fields([{ name: 'image_files', max
     description, amenities, amenities_custom, featured, sort_order, existing_images,
     floor, min_stay, pet_policy, smoking_allowed, events_allowed,
     building_amenities_list, building_amenities_custom, highlights, video_url, bed_type, address, transit,
-    floor_plan_image, image_order, location_description, show_booking
+    floor_plan_image, image_order, location_description, show_booking, property_type
   } = req.body;
 
   try {
@@ -206,9 +206,9 @@ router.post('/listings', requireAdmin, upload.fields([{ name: 'image_files', max
         status, available_from, available_to, description, amenities, images,
         featured, sort_order, floor, min_stay, pet_policy, smoking_allowed,
         events_allowed, building_amenities, highlights, video_url, bed_type, address, transit,
-        floor_plan_image, location_description, show_booking
+        floor_plan_image, location_description, show_booking, property_type
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
     `, [
       title, location || 'New York', neighborhood, city, state || 'NY',
       parseInt(bedrooms) || 0, parseFloat(bathrooms) || 1,
@@ -224,7 +224,8 @@ router.post('/listings', requireAdmin, upload.fields([{ name: 'image_files', max
       buildingAmenitiesArr, highlights || null, video_url || null,
       bed_type || null, address || null, transit || null,
       finalFloorPlan, location_description || null,
-      show_booking === 'on' || show_booking === 'true'
+      show_booking === 'on' || show_booking === 'true',
+      property_type || null
     ]);
 
     res.redirect('/admin/dashboard?success=Listing created successfully');
@@ -277,7 +278,7 @@ router.post('/listings/:id', requireAdmin, upload.fields([{ name: 'image_files',
     description, amenities, amenities_custom, featured, sort_order, existing_images,
     floor, min_stay, pet_policy, smoking_allowed, events_allowed,
     building_amenities_list, building_amenities_custom, highlights, video_url, bed_type, address, transit,
-    floor_plan_image, image_order, location_description, show_booking
+    floor_plan_image, image_order, location_description, show_booking, property_type
   } = req.body;
 
   try {
@@ -334,9 +335,9 @@ router.post('/listings/:id', requireAdmin, upload.fields([{ name: 'image_files',
         building_amenities = $23, highlights = $24,
         video_url = $25, bed_type = $26, address = $27, transit = $28,
         floor_plan_image = $29, location_description = $30,
-        show_booking = $31,
+        show_booking = $31, property_type = $32,
         updated_at = NOW()
-      WHERE id = $32
+      WHERE id = $33
     `, [
       title, location || 'New York', neighborhood, city, state || 'NY',
       parseInt(bedrooms) || 0, parseFloat(bathrooms) || 1,
@@ -353,6 +354,7 @@ router.post('/listings/:id', requireAdmin, upload.fields([{ name: 'image_files',
       bed_type || null, address || null, transit || null,
       finalFloorPlan, location_description || null,
       show_booking === 'on' || show_booking === 'true',
+      property_type || null,
       req.params.id
     ]);
 
