@@ -188,6 +188,17 @@ body {
   background-position: right 16px center;
   padding-right: 40px;
 }
+/* Stay-date range picker (replaces the old Duration select) */
+.browse-field-dates { flex: 1.6; }
+.date-range {
+  display: flex;
+  gap: 8px;
+}
+.date-range input[type="date"] {
+  flex: 1;
+  min-width: 0;
+  cursor: text;
+}
 .browse-btn {
   width: 100%;
   padding: 14px 16px;
@@ -494,14 +505,12 @@ body {
         <option value="6000-999999">$6,000+</option>
       </select>
     </div>
-    <div class="browse-field">
-      <label>Duration</label>
-      <select id="filter-duration">
-        <option value="">Any Duration</option>
-        <option value="1">1 Month</option>
-        <option value="3">3 Months</option>
-        <option value="6">6 Months</option>
-      </select>
+    <div class="browse-field browse-field-dates">
+      <label>Stay Dates</label>
+      <div class="date-range">
+        <input type="date" id="filter-movein" aria-label="Move-in date" title="Move-in date">
+        <input type="date" id="filter-moveout" aria-label="Move-out date" title="Move-out date">
+      </div>
     </div>
     <div class="browse-field">
       <label>&nbsp;</label>
@@ -517,8 +526,16 @@ body {
       <p class="properties-count">Showing <%= listings.length %> properties</p>
     </div>
     <div class="properties-grid">
+      <%
+      // Format a DATE column as YYYY-MM-DD (local components) for the date filter; '' when unset.
+      var fmtDate = function(d) {
+        if (!d) return '';
+        var dt = new Date(d);
+        return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+      };
+      %>
       <% listings.forEach(function(listing) { %>
-      <a href="/properties/<%= listing.id %>" class="property-card" style="text-decoration: none; color: inherit; display: block;" data-location="<%= listing.location || 'New York' %>" data-city="<%= listing.city %>" data-state="<%= listing.state %>" data-bedrooms="<%= listing.bedrooms %>" data-price="<%= listing.price_monthly %>">
+      <a href="/properties/<%= listing.id %>" class="property-card" style="text-decoration: none; color: inherit; display: block;" data-location="<%= listing.location || 'New York' %>" data-city="<%= listing.city %>" data-state="<%= listing.state %>" data-bedrooms="<%= listing.bedrooms %>" data-price="<%= listing.price_monthly %>" data-available-from="<%= fmtDate(listing.available_from) %>" data-available-to="<%= fmtDate(listing.available_to) %>">
         <div class="property-img">
           <% if (listing.images && listing.images.length > 0) { %>
           <div class="property-img-inner" style="background-image: url('<%= listing.images[0] %>'); background-size: cover; background-position: center;"></div>
@@ -638,6 +655,8 @@ function runSearch() {
   var loc = document.getElementById('filter-location').value;
   var bedrooms = document.getElementById('filter-bedrooms').value;
   var price = document.getElementById('filter-price').value;
+  var moveIn = document.getElementById('filter-movein').value;   // YYYY-MM-DD or ''
+  var moveOut = document.getElementById('filter-moveout').value; // YYYY-MM-DD or ''
   var cards = document.querySelectorAll('.property-card');
   var count = 0;
 
@@ -669,6 +688,22 @@ function runSearch() {
       if (cardPrice < min || cardPrice > max) show = false;
     }
 
+    // Stay-dates filter: a room matches when its availability window covers the
+    // requested stay. Date strings are YYYY-MM-DD, so string comparison is chronological.
+    // An empty availability bound means open-ended (room shows for any dates).
+    if (moveIn || moveOut) {
+      var availFrom = card.dataset.availableFrom;
+      var availTo = card.dataset.availableTo;
+      if (moveIn) {
+        if (availFrom && availFrom > moveIn) show = false; // not available until after move-in
+        if (availTo && availTo < moveIn) show = false;     // window ends before move-in
+      }
+      if (moveOut) {
+        if (availTo && availTo < moveOut) show = false;    // window ends before move-out
+        if (availFrom && availFrom > moveOut) show = false;// window starts after move-out
+      }
+    }
+
     card.style.display = show ? '' : 'none';
     if (show) count++;
   });
@@ -682,6 +717,22 @@ function runSearch() {
 var searchBtn = document.getElementById('search-btn');
 searchBtn.addEventListener('click', runSearch);
 searchBtn.addEventListener('touchend', function(e) { e.preventDefault(); runSearch(); });
+
+// Stay-date pickers: block past dates and keep move-out on/after move-in.
+(function() {
+  var moveIn = document.getElementById('filter-movein');
+  var moveOut = document.getElementById('filter-moveout');
+  if (!moveIn || !moveOut) return;
+  var today = new Date().toISOString().slice(0, 10);
+  moveIn.min = today;
+  moveOut.min = today;
+  moveIn.addEventListener('change', function() {
+    moveOut.min = moveIn.value || today;
+    if (moveOut.value && moveOut.value < moveOut.min) moveOut.value = moveOut.min;
+    runSearch();
+  });
+  moveOut.addEventListener('change', runSearch);
+})();
 
 // Pre-filter by location from the URL (e.g. /properties?location=Los%20Angeles)
 (function() {
