@@ -178,14 +178,40 @@ body {
   border: 1px solid var(--warm);
   border-left: 3px solid var(--accent);
 }
-.apply-booking-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
 .apply-booking-label {
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--muted);
 }
+.apply-booking-property { gap: 6px; }
 .apply-booking-value {
-  font-family: var(--serif); font-size: 1.05rem; color: var(--ink); text-align: right;
+  font-family: var(--serif); font-size: 1.15rem; color: var(--ink); line-height: 1.3;
 }
+.apply-booking-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.apply-booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.apply-booking-field label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.apply-booking-field input {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  color: var(--ink);
+  padding: 12px 14px;
+  border: 1px solid var(--warm);
+  background: var(--white);
+  outline: none;
+  border-radius: 0;
+  transition: border-color 0.3s;
+}
+.apply-booking-field input:focus { border-color: var(--accent-text); }
 .form-group {
   display: flex;
   flex-direction: column;
@@ -402,31 +428,27 @@ body {
       <h2>Tell Us About <em>Yourself.</em></h2>
       <p class="apply-intro">Fill out the form below and our team will reach out to help you find the perfect home.</p>
       <form class="apply-form" action="/apply" method="POST">
-        <% if (typeof prefill !== 'undefined' && (prefill.property || prefill.movein || prefill.moveout)) {
-             var fmtStay = function(s) {
-               if (!s) return 'Flexible';
-               var d = new Date(s + 'T00:00:00');
-               return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-             };
-        %>
+        <% if (typeof prefill !== 'undefined' && (prefill.property || prefill.movein || prefill.moveout)) { %>
         <div class="apply-booking">
           <% if (prefill.property) { %>
-          <div class="apply-booking-row">
+          <div class="apply-booking-field apply-booking-property">
             <span class="apply-booking-label">Property</span>
             <span class="apply-booking-value"><%= prefill.property %></span>
           </div>
           <% } %>
-          <% if (prefill.movein || prefill.moveout) { %>
-          <div class="apply-booking-row">
-            <span class="apply-booking-label">Stay Dates</span>
-            <span class="apply-booking-value"><%= fmtStay(prefill.movein) %> &ndash; <%= fmtStay(prefill.moveout) %></span>
+          <div class="apply-booking-dates">
+            <div class="apply-booking-field">
+              <label for="move_in">Move In</label>
+              <input type="date" id="move_in" name="move_in" value="<%= prefill.movein || '' %>">
+            </div>
+            <div class="apply-booking-field">
+              <label for="move_out">Move Out</label>
+              <input type="date" id="move_out" name="move_out" value="<%= prefill.moveout || '' %>">
+            </div>
           </div>
-          <% } %>
         </div>
         <input type="hidden" name="property" value="<%= prefill.property %>">
         <input type="hidden" name="listing_id" value="<%= prefill.listing %>">
-        <input type="hidden" name="move_in" value="<%= prefill.movein %>">
-        <input type="hidden" name="move_out" value="<%= prefill.moveout %>">
         <% } %>
         <div class="form-row">
           <div class="form-group">
