@@ -327,6 +327,10 @@ body {
   padding-bottom: 32px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
+.footer-brand .nav-logo {
+  display: flex;
+  margin-bottom: 20px;
+}
 .footer-brand p {
   font-size: 0.88rem;
   font-weight: 300;
@@ -542,6 +546,34 @@ if (navMobile) {
       navLinks.style.gap = '20px';
     }
   });
+}
+
+// Minimum stay is 30 days: move-out must be at least 30 days after move-in.
+var MIN_STAY_DAYS = 30;
+var moveInField = document.getElementById('move_in');
+var moveOutField = document.getElementById('move_out');
+function toISODate(d) {
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+// Push the move-out field's floor to (move-in + 30d) and bump the value if shorter.
+function enforceMinStay() {
+  if (!moveInField || !moveOutField || !moveInField.value) return;
+  var start = new Date(moveInField.value + 'T00:00:00');
+  if (isNaN(start.getTime())) return;
+  var minOut = new Date(start.getTime());
+  minOut.setDate(minOut.getDate() + MIN_STAY_DAYS);
+  var minOutStr = toISODate(minOut);
+  moveOutField.min = minOutStr;
+  if (!moveOutField.value || moveOutField.value < minOutStr) {
+    moveOutField.value = minOutStr;
+  }
+}
+if (moveInField && moveOutField) {
+  moveInField.addEventListener('change', enforceMinStay);
+  // Apply the 30-day floor on load (covers dates carried over from Book Now).
+  enforceMinStay();
 }
 </script>
 </body>
