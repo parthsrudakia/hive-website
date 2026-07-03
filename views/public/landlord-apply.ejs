@@ -282,6 +282,17 @@ body {
   transition: all 0.3s;
 }
 
+/* ===== FORM ERROR ===== */
+.form-error {
+  padding: 14px 16px;
+  margin-bottom: 28px;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
 /* ===== FOOTER ===== */
 .footer {
   padding: clamp(48px, 6vw, 80px) 0 40px;
@@ -398,38 +409,41 @@ body {
       <% } else { %>
       <h2>Tell Us About Your <em>Property.</em></h2>
       <p class="apply-intro">Fill out the form below and our partnerships team will get back to you with a tailored proposal.</p>
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="form-error"><%= error %></div>
+      <% } %>
       <form class="apply-form" action="/partners/apply" method="POST">
         <div class="form-row">
           <div class="form-group">
             <label>Full Name <span class="required">*</span></label>
-            <input type="text" name="full_name" placeholder="Your full name" required>
+            <input type="text" name="full_name" placeholder="Your full name" required minlength="2" maxlength="100" pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'\-]+" title="Letters, spaces, apostrophes and hyphens only">
           </div>
           <div class="form-group">
             <label>Email <span class="required">*</span></label>
-            <input type="email" name="email" placeholder="you@email.com" required>
+            <input type="email" name="email" placeholder="you@email.com" required maxlength="200">
           </div>
         </div>
         <div class="form-group">
           <label>Phone <span class="required">*</span></label>
-          <input type="tel" name="phone" placeholder="(555) 123-4567" required>
+          <input type="tel" name="phone" placeholder="(555) 123-4567" required minlength="7" maxlength="20" pattern="[0-9()+\-. ]{7,20}" title="Digits, spaces and ()+-. only, at least 7 digits">
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Property Location <span class="required">*</span></label>
-            <input type="text" name="property_location" placeholder="City, State (e.g. New York, NY)" required>
+            <input type="text" name="property_location" placeholder="City, State (e.g. New York, NY)" required minlength="2" maxlength="150">
           </div>
           <div class="form-group">
             <label>Number of Units <span class="required">*</span></label>
-            <input type="text" name="num_units" placeholder="e.g. 1, 5, 20+" required>
+            <input type="text" name="num_units" placeholder="e.g. 1, 5, 20+" required maxlength="8" pattern="[0-9]{1,6} ?\+?" title="A number, optionally followed by +, e.g. 5 or 20+">
           </div>
         </div>
         <div class="form-group">
           <label>Tell us about your property and what you're looking for <span class="required">*</span></label>
-          <textarea name="message" placeholder="Describe your property, current rental situation, and what you're hoping Hive can help with." required></textarea>
+          <textarea name="message" placeholder="Describe your property, current rental situation, and what you're hoping Hive can help with." required minlength="10" maxlength="2000"></textarea>
         </div>
         <div class="form-group">
           <label>How did you hear about Hive? <span class="required">*</span></label>
-          <input type="text" name="referral_source" placeholder="Google, referral, social media, etc." required>
+          <input type="text" name="referral_source" placeholder="Google, referral, social media, etc." required minlength="2" maxlength="150">
         </div>
         <button type="submit" class="apply-submit">
           Submit Inquiry

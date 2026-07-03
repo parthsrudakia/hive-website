@@ -71,6 +71,23 @@ function confirmationHtml(heading, bodyLines) {
     </div>`;
 }
 
+// --- Form field validation ---------------------------------------------
+// Server-side mirror of the client-side pattern/minlength attributes, so the
+// rules hold even when the HTML validation is bypassed (curl, bots).
+const isEmail = (s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
+const isName = (s) => /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'-]{1,99}$/.test(s);
+const isPhone = (s) => /^[0-9()+\-. ]{7,20}$/.test(s) && (s.match(/\d/g) || []).length >= 7;
+const isText = (s, min, max) => typeof s === 'string' && s.trim().length >= min && s.trim().length <= max;
+// A URL or a social handle (e.g. https://linkedin.com/in/x, instagram.com/x, @handle)
+const isUrlish = (s) => /^(https?:\/\/)?([\w-]+\.)+[A-Za-z]{2,}(\/\S*)?$/.test(s) || /^@?[\w.]{2,50}$/.test(s);
+const isUnits = (s) => /^[0-9]{1,6} ?\+?$/.test(s);
+
+// Returns the first error message, or null if every check passes.
+function firstError(checks) {
+  for (const [ok, message] of checks) if (!ok) return message;
+  return null;
+}
+
 // Footer "Residences" links mirror the cities that currently have available
 // listings. Cached in memory so every page render doesn't hit the database.
 let footerCitiesCache = { cities: [], fetchedAt: 0 };
@@ -227,6 +244,26 @@ router.post('/apply', async (req, res) => {
   try {
     const { full_name, email, phone, about, social_media, property, move_in, move_out } = req.body;
 
+    const error = firstError([
+      [isName(full_name || ''), 'Please enter your full name (letters only, at least 2 characters).'],
+      [isEmail(email || ''), 'Please enter a valid email address.'],
+      [isPhone(phone || ''), 'Please enter a valid phone number (at least 7 digits).'],
+      [isText(about || '', 10, 2000), 'Please tell us a bit about yourself (10–2000 characters).'],
+      [isUrlish((social_media || '').trim()), 'Please enter a valid social media / LinkedIn link or handle.']
+    ]);
+    if (error) {
+      return res.status(400).render('public/apply', {
+        success: false,
+        error,
+        prefill: {
+          property: property || '',
+          listing: req.body.listing_id || '',
+          movein: move_in || '',
+          moveout: move_out || ''
+        }
+      });
+    }
+
     // Save to database, including any booking context from a listing's "Book Now" button
     await pool.query(
       `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out)
@@ -312,8 +349,6 @@ function handleIdUpload(req, res, next) {
   });
 }
 
-const isEmail = (s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
-
 // Create a pending application + an embedded Checkout session.
 router.post('/apply-now/session', handleIdUpload, async (req, res) => {
   try {
@@ -340,8 +375,17 @@ router.post('/apply-now/session', handleIdUpload, async (req, res) => {
     if (!idFront || !idBack) {
       return res.status(400).json({ error: 'Please upload both the front and back of your photo ID.' });
     }
-    if (!isEmail(email)) return res.status(400).json({ error: 'Please provide a valid email address.' });
-    if (!isEmail(ec_email)) return res.status(400).json({ error: 'Please provide a valid emergency contact email.' });
+    const fieldError = firstError([
+      [isName(first_name), 'Please enter a valid first name (letters only, at least 2 characters).'],
+      [isName(last_name), 'Please enter a valid last name (letters only, at least 2 characters).'],
+      [isEmail(email), 'Please provide a valid email address.'],
+      [isPhone(phone), 'Please enter a valid phone number (at least 7 digits).'],
+      [isName(ec_name), 'Please enter a valid emergency contact name (letters only).'],
+      [isPhone(ec_phone), 'Please enter a valid emergency contact phone number.'],
+      [isEmail(ec_email), 'Please provide a valid emergency contact email.'],
+      [isText(ec_relationship, 2, 50), 'Please enter the emergency contact relationship (2–50 characters).']
+    ]);
+    if (fieldError) return res.status(400).json({ error: fieldError });
 
     // Store the sensitive ID images in the private bucket (paths, not public URLs).
     let id_front_path, id_back_path;
@@ -502,6 +546,19 @@ router.post('/partners/apply', async (req, res) => {
   try {
     const { full_name, email, phone, property_location, num_units, property_type, message, referral_source } = req.body;
 
+    const error = firstError([
+      [isName(full_name || ''), 'Please enter your full name (letters only, at least 2 characters).'],
+      [isEmail(email || ''), 'Please enter a valid email address.'],
+      [isPhone(phone || ''), 'Please enter a valid phone number (at least 7 digits).'],
+      [isText(property_location || '', 2, 150), 'Please enter the property location (2–150 characters).'],
+      [isUnits((num_units || '').trim()), 'Please enter the number of units as a number, e.g. 1, 5 or 20+.'],
+      [isText(message || '', 10, 2000), 'Please tell us about your property (10–2000 characters).'],
+      [isText(referral_source || '', 2, 150), 'Please tell us how you heard about Hive (2–150 characters).']
+    ]);
+    if (error) {
+      return res.status(400).render('public/landlord-apply', { success: false, error });
+    }
+
     // Save to database
     await pool.query(
       `INSERT INTO landlord_inquiries (full_name, email, phone, property_location, num_units, property_type, message, referral_source)
@@ -569,6 +626,17 @@ router.get('/contact', (req, res) => {
 
 router.post('/contact', async (req, res) => {
   const { full_name, email, phone, subject, message } = req.body;
+
+  const error = firstError([
+    [isName(full_name || ''), 'Please enter your full name (letters only, at least 2 characters).'],
+    [isEmail(email || ''), 'Please enter a valid email address.'],
+    [isPhone(phone || ''), 'Please enter a valid phone number (at least 7 digits).'],
+    [isText(subject || '', 3, 150), 'Please enter a subject (3–150 characters).'],
+    [isText(message || '', 10, 2000), 'Please enter a message (10–2000 characters).']
+  ]);
+  if (error) {
+    return res.status(400).render('public/contact', { success: false, error });
+  }
 
   // Notify the master inbox with the submitted details (best-effort)
   try {

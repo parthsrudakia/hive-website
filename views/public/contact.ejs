@@ -282,6 +282,17 @@ body {
   transition: all 0.3s;
 }
 
+/* ===== FORM ERROR ===== */
+.form-error {
+  padding: 14px 16px;
+  margin-bottom: 28px;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
 /* ===== FOOTER ===== */
 .footer {
   padding: clamp(48px, 6vw, 80px) 0 40px;
@@ -398,28 +409,31 @@ body {
       <% } else { %>
       <h2>Send Us a <em>Message.</em></h2>
       <p class="apply-intro">Fill out the form below and we'll get back to you as soon as we can.</p>
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="form-error"><%= error %></div>
+      <% } %>
       <form class="apply-form" action="/contact" method="POST">
         <div class="form-row">
           <div class="form-group">
             <label>Full Name <span class="required">*</span></label>
-            <input type="text" name="full_name" placeholder="Your full name" required>
+            <input type="text" name="full_name" placeholder="Your full name" required minlength="2" maxlength="100" pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'\-]+" title="Letters, spaces, apostrophes and hyphens only">
           </div>
           <div class="form-group">
             <label>Email <span class="required">*</span></label>
-            <input type="email" name="email" placeholder="you@email.com" required>
+            <input type="email" name="email" placeholder="you@email.com" required maxlength="200">
           </div>
         </div>
         <div class="form-group">
           <label>Phone <span class="required">*</span></label>
-          <input type="tel" name="phone" placeholder="(555) 123-4567" required>
+          <input type="tel" name="phone" placeholder="(555) 123-4567" required minlength="7" maxlength="20" pattern="[0-9()+\-. ]{7,20}" title="Digits, spaces and ()+-. only, at least 7 digits">
         </div>
         <div class="form-group">
           <label>Subject <span class="required">*</span></label>
-          <input type="text" name="subject" placeholder="What's this about?" required>
+          <input type="text" name="subject" placeholder="What's this about?" required minlength="3" maxlength="150">
         </div>
         <div class="form-group">
           <label>Message <span class="required">*</span></label>
-          <textarea name="message" placeholder="How can we help?" required></textarea>
+          <textarea name="message" placeholder="How can we help?" required minlength="10" maxlength="2000"></textarea>
         </div>
         <button type="submit" class="apply-submit">
           Send Message
