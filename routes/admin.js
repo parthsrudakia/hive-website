@@ -405,6 +405,15 @@ router.get('/applications', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/applications/clear-all', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM applications');
+  } catch (err) {
+    console.error('Clear applications error:', err);
+  }
+  res.redirect('/admin/applications');
+});
+
 router.post('/applications/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM applications WHERE id = $1', [req.params.id]);
@@ -473,6 +482,15 @@ router.get('/landlord-inquiries', requireAdmin, async (req, res) => {
     console.error('Landlord inquiries error:', err);
     res.render('admin/landlord-inquiries', { inquiries: [], adminName: req.session.adminName });
   }
+});
+
+router.post('/landlord-inquiries/clear-all', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM landlord_inquiries');
+  } catch (err) {
+    console.error('Clear landlord inquiries error:', err);
+  }
+  res.redirect('/admin/landlord-inquiries');
 });
 
 router.post('/landlord-inquiries/:id/delete', requireAdmin, async (req, res) => {

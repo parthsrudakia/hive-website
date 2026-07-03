@@ -55,6 +55,7 @@
 
     .btn-delete { display: inline-block; padding: 5px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #b91c1c; background: #fef2f2; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
     .btn-delete:hover { background: #fecaca; }
+    .btn-clear-all { padding: 8px 18px; font-size: 13px; border: 1px solid #fecaca; }
     .delete-form { display: inline; margin: 0; padding: 0; }
   </style>
 </head>
@@ -79,6 +80,11 @@
   <main class="admin-content">
     <div class="admin-header">
       <h2>Landlord Inquiries <span class="count">(<%= inquiries.length %>)</span></h2>
+      <% if (inquiries.length > 0) { %>
+      <form action="/admin/landlord-inquiries/clear-all" method="POST" onsubmit="return confirm('Delete ALL <%= inquiries.length %> landlord inquiries? This cannot be undone.')">
+        <button type="submit" class="btn-delete btn-clear-all">Clear All</button>
+      </form>
+      <% } %>
     </div>
 
     <% if (inquiries.length === 0) { %>
