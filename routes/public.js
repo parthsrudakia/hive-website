@@ -71,6 +71,32 @@ function confirmationHtml(heading, bodyLines) {
     </div>`;
 }
 
+// Footer "Residences" links mirror the cities that currently have available
+// listings. Cached in memory so every page render doesn't hit the database.
+let footerCitiesCache = { cities: [], fetchedAt: 0 };
+const FOOTER_CITIES_TTL_MS = 5 * 60 * 1000;
+
+router.use(async (req, res, next) => {
+  const now = Date.now();
+  if (now - footerCitiesCache.fetchedAt > FOOTER_CITIES_TTL_MS) {
+    try {
+      // `location` is the market name the properties-page filter matches on
+      // (cards default it to 'New York'), so the footer links use it too.
+      const { rows } = await pool.query(
+        `SELECT DISTINCT COALESCE(NULLIF(btrim(location), ''), 'New York') AS city
+         FROM listings WHERE status != 'rented'
+         ORDER BY city ASC`
+      );
+      footerCitiesCache = { cities: rows.map(r => r.city), fetchedAt: now };
+    } catch (err) {
+      console.error('Error loading footer cities:', err.message);
+      footerCitiesCache.fetchedAt = now; // keep last known list, retry after TTL
+    }
+  }
+  res.locals.footerCities = footerCitiesCache.cities;
+  next();
+});
+
 router.get('/', async (req, res) => {
   try {
     // One listing per property: rooms in the same unit share title + city, so

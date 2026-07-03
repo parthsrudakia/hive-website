@@ -547,10 +547,9 @@ body {
       </div>
       <div class="footer-col">
         <h4>Residences</h4>
-        <a href="#">New York</a>
-        <a href="#">Los Angeles</a>
-        <a href="#">Chicago</a>
-        <a href="#">Miami</a>
+        <% (locals.footerCities || []).forEach(function(city) { %>
+        <a href="/properties?location=<%= encodeURIComponent(city) %>"><%= city %></a>
+        <% }); %>
         <a href="/properties">All Properties</a>
       </div>
       <div class="footer-col">

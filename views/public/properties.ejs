@@ -644,10 +644,9 @@ body {
       </div>
       <div class="footer-col">
         <h4>Residences</h4>
-        <a href="#">New York</a>
-        <a href="#">Los Angeles</a>
-        <a href="#">Chicago</a>
-        <a href="#">Miami</a>
+        <% (locals.footerCities || []).forEach(function(city) { %>
+        <a href="/properties?location=<%= encodeURIComponent(city) %>"><%= city %></a>
+        <% }); %>
         <a href="/properties">All Properties</a>
       </div>
       <div class="footer-col">
@@ -830,10 +829,16 @@ searchBtn.addEventListener('touchend', function(e) { e.preventDefault(); runSear
   if (!loc) return;
   var sel = document.getElementById('filter-location');
   var match = Array.prototype.find.call(sel.options, function(o) { return o.value === loc; });
-  if (match) {
-    sel.value = loc;
-    runSearch();
+  if (!match) {
+    // City not in the static dropdown (e.g. a new market) — add it so the
+    // footer's dynamic city links always filter correctly.
+    var opt = document.createElement('option');
+    opt.value = loc;
+    opt.textContent = loc;
+    sel.appendChild(opt);
   }
+  sel.value = loc;
+  runSearch();
 })();
 </script>
 
