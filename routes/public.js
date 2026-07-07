@@ -1,10 +1,79 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const pool = require('../db/pool');
 const { getGoogleReviews } = require('../utils/googleReviews');
 const { storePrivateFile, signedPrivateUrl } = require('../utils/storage');
+
+// ---------------------------------------------------------------------------
+// Abuse protection for public form submissions.
+//
+// Every public form below triggers an outbound email (and in some cases a
+// confirmation email to an address the submitter controls). Without a limit,
+// these endpoints can be scripted to relay mail off the Hive domain, burning
+// our sending reputation. These IP-keyed limiters cap how often a single
+// client can submit. `trust proxy` is enabled in server.js, so req.ip is the
+// real client IP behind Railway's/Vercel's reverse proxy.
+//
+// Counters are in-memory (per server instance). On the long-lived Railway
+// process that is a hard limit; on Vercel's serverless instances it is
+// best-effort per instance but still meaningfully raises the cost of abuse.
+const FIFTEEN_MIN = 15 * 60 * 1000;
+
+// Renders an EJS form view with a friendly "slow down" message on a 429.
+// `extraLocals` supplies any view locals beyond { success, error } that the
+// template needs so rendering never throws.
+function renderLimit(view, extraLocals = {}) {
+  return (req, res) => {
+    res.status(429).render(view, Object.assign({
+      success: false,
+      error: 'Too many submissions from your network. Please wait a few minutes and try again.'
+    }, extraLocals));
+  };
+}
+
+// Tenant application form (POST /apply).
+const applyLimiter = rateLimit({
+  windowMs: FIFTEEN_MIN,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: renderLimit('public/apply', {
+    prefill: { property: '', listing: '', movein: '', moveout: '' }
+  })
+});
+
+// Paid tenant application flow (POST /apply-now/session) — responds with JSON.
+const applyNowLimiter = rateLimit({
+  windowMs: FIFTEEN_MIN,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many attempts from your network. Please wait a few minutes and try again.'
+  })
+});
+
+// Landlord / partner inquiry form (POST /partners/apply).
+const landlordLimiter = rateLimit({
+  windowMs: FIFTEEN_MIN,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: renderLimit('public/landlord-apply')
+});
+
+// General contact form (POST /contact) — the endpoint seen being abused as a
+// mail relay, so it gets the tightest cap.
+const contactLimiter = rateLimit({
+  windowMs: FIFTEEN_MIN,
+  max: 4,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: renderLimit('public/contact')
+});
 
 // Stripe client for the paid tenant application. Null when no secret key is
 // configured, so the apply-now page degrades gracefully instead of crashing.
@@ -240,7 +309,7 @@ router.get('/apply', (req, res) => {
   });
 });
 
-router.post('/apply', async (req, res) => {
+router.post('/apply', applyLimiter, async (req, res) => {
   try {
     const { full_name, email, phone, about, social_media, property, move_in, move_out } = req.body;
 
@@ -350,7 +419,7 @@ function handleIdUpload(req, res, next) {
 }
 
 // Create a pending application + an embedded Checkout session.
-router.post('/apply-now/session', handleIdUpload, async (req, res) => {
+router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, res) => {
   try {
     if (!stripe) {
       return res.status(503).json({ error: 'Payments are not configured yet. Please try again later.' });
@@ -542,7 +611,7 @@ router.get('/partners/apply', (req, res) => {
   res.render('public/landlord-apply', { success: false });
 });
 
-router.post('/partners/apply', async (req, res) => {
+router.post('/partners/apply', landlordLimiter, async (req, res) => {
   try {
     const { full_name, email, phone, property_location, num_units, property_type, message, referral_source } = req.body;
 
@@ -624,7 +693,7 @@ router.get('/contact', (req, res) => {
   res.render('public/contact', { success: false });
 });
 
-router.post('/contact', async (req, res) => {
+router.post('/contact', contactLimiter, async (req, res) => {
   const { full_name, email, phone, subject, message } = req.body;
 
   const error = firstError([
