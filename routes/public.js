@@ -4,6 +4,7 @@ const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const pool = require('../db/pool');
+const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { getGoogleReviews } = require('../utils/googleReviews');
 const { storePrivateFile, signedPrivateUrl } = require('../utils/storage');
 
@@ -15,11 +16,13 @@ const { storePrivateFile, signedPrivateUrl } = require('../utils/storage');
 // these endpoints can be scripted to relay mail off the Hive domain, burning
 // our sending reputation. These IP-keyed limiters cap how often a single
 // client can submit. `trust proxy` is enabled in server.js, so req.ip is the
-// real client IP behind Railway's/Vercel's reverse proxy.
+// real client IP behind Vercel's reverse proxy.
 //
-// Counters are in-memory (per server instance). On the long-lived Railway
-// process that is a hard limit; on Vercel's serverless instances it is
-// best-effort per instance but still meaningfully raises the cost of abuse.
+// The app runs on Vercel serverless, so counters live in Postgres (see
+// utils/pgRateLimitStore) rather than in memory — a per-instance memory store
+// would reset on every cold start and never actually enforce the limit. Each
+// limiter gets its own `prefix` so their counts stay separate in the shared
+// table.
 const FIFTEEN_MIN = 15 * 60 * 1000;
 
 // Renders an EJS form view with a friendly "slow down" message on a 429.
@@ -40,6 +43,7 @@ const applyLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'apply', windowMs: FIFTEEN_MIN }),
   handler: renderLimit('public/apply', {
     prefill: { property: '', listing: '', movein: '', moveout: '' }
   })
@@ -51,6 +55,7 @@ const applyNowLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'apply-now', windowMs: FIFTEEN_MIN }),
   handler: (req, res) => res.status(429).json({
     error: 'Too many attempts from your network. Please wait a few minutes and try again.'
   })
@@ -62,6 +67,7 @@ const landlordLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'landlord', windowMs: FIFTEEN_MIN }),
   handler: renderLimit('public/landlord-apply')
 });
 
@@ -72,6 +78,7 @@ const contactLimiter = rateLimit({
   max: 4,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'contact', windowMs: FIFTEEN_MIN }),
   handler: renderLimit('public/contact')
 });
 
