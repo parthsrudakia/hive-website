@@ -8,7 +8,7 @@ const pool = require('../db/pool');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { mintFormToken, checkFormGuards, turnstileEnabled } = require('../utils/formGuard');
 const { getGoogleReviews } = require('../utils/googleReviews');
-const { storePrivateFile, signedPrivateUrl } = require('../utils/storage');
+const { storePrivateFile } = require('../utils/storage');
 
 // ---------------------------------------------------------------------------
 // Abuse protection for public form submissions.
@@ -90,6 +90,11 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? require('stripe')(process.env.STRIPE_SECRET_KEY)
   : null;
 const APPLICATION_FEE_CENTS = parseInt(process.env.APPLICATION_FEE_CENTS || '2000', 10);
+// Reusable Stripe Price for the application fee ("Hive Tenant Application
+// Fee" product). When set, Checkout charges this price object; when unset,
+// sessions fall back to inline price_data using APPLICATION_FEE_CENTS. The
+// two should agree — the price object wins for what's actually charged.
+const APPLICATION_FEE_PRICE_ID = process.env.STRIPE_APPLICATION_FEE_PRICE_ID || '';
 
 // Photo-ID uploads kept in memory, then pushed to the PRIVATE bucket. Accepts
 // images + PDF, 10 MB max per file.
@@ -107,6 +112,7 @@ const idUpload = multer({
 
 // Outbound mail helpers shared with the Stripe webhook handler.
 const { sendMail, confirmationHtml, NOTIFY_EMAIL } = require('../utils/mailer');
+const { finalizePaidApplication } = require('../utils/tenantApplication');
 
 // --- Form field validation ---------------------------------------------
 // Server-side mirror of the client-side pattern/minlength attributes, so the
@@ -512,17 +518,21 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
       ui_mode: 'embedded_page',
       mode: 'payment',
       customer_email: email,
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency: 'usd',
-          unit_amount: APPLICATION_FEE_CENTS,
-          product_data: {
-            name: 'Hive Tenant Application Fee',
-            description: 'Non-refundable application processing fee'
-          }
-        }
-      }],
+      line_items: [
+        APPLICATION_FEE_PRICE_ID
+          ? { price: APPLICATION_FEE_PRICE_ID, quantity: 1 }
+          : {
+              quantity: 1,
+              price_data: {
+                currency: 'usd',
+                unit_amount: APPLICATION_FEE_CENTS,
+                product_data: {
+                  name: 'Hive Tenant Application Fee',
+                  description: 'Non-refundable application processing fee'
+                }
+              }
+            }
+      ],
       metadata: { application_id: String(appId) },
       payment_intent_data: { metadata: { application_id: String(appId) } },
       return_url: `${baseUrl}/apply-now/complete?session_id={CHECKOUT_SESSION_ID}`
@@ -557,21 +567,14 @@ router.get('/apply-now/complete', async (req, res) => {
       return renderResult('unpaid');
     }
 
-    // Mark paid only if not already paid — the WHERE clause makes this idempotent,
-    // so a page refresh won't re-send confirmation emails.
-    const { rows } = await pool.query(
-      `UPDATE tenant_applications
-         SET payment_status = 'paid',
-             paid_at = NOW(),
-             stripe_payment_intent = $1
-       WHERE stripe_session_id = $2 AND payment_status <> 'paid'
-       RETURNING id, full_name, email, phone, answers, identity_status`,
-      [session.payment_intent || null, sessionId]
-    );
+    // Finalize (mark paid + send emails once). Shared with the
+    // checkout.session.completed webhook — whichever runs first wins, so a
+    // refresh or a webhook race never re-sends the emails.
+    const app = await finalizePaidApplication(session);
 
-    // Already finalized (refresh) — show success (and the identity-verification
-    // step in its current state) without re-emailing.
-    if (rows.length === 0) {
+    // Already finalized (refresh, or the webhook beat us) — show success and
+    // the identity step in its current state without re-emailing.
+    if (!app) {
       const { rows: existing } = await pool.query(
         `SELECT answers, identity_status FROM tenant_applications WHERE stripe_session_id = $1`,
         [sessionId]
@@ -581,59 +584,6 @@ router.get('/apply-now/complete', async (req, res) => {
         identityToken: (row && row.answers && row.answers.identity_token) || null,
         identityStatus: (row && row.identity_status) || 'not_started'
       });
-    }
-
-    const app = rows[0];
-
-    // Notify the master inbox (best-effort).
-    try {
-      const a = app.answers || {};
-      const row = (label, value) => `<tr><td style="padding:10px;border-bottom:1px solid #eee;font-weight:bold;width:200px;">${label}</td><td style="padding:10px;border-bottom:1px solid #eee;">${value || 'Not provided'}</td></tr>`;
-      // Short-lived signed links so the admin can view the photo IDs (private bucket).
-      const frontLink = await signedPrivateUrl(a.id_front_path).catch(() => null);
-      const backLink = await signedPrivateUrl(a.id_back_path).catch(() => null);
-      const idCell = (url) => url ? `<a href="${url}" style="color:#d4920b;">View (link valid 7 days)</a>` : 'Uploaded (open in admin)';
-      await sendMail({
-        to: NOTIFY_EMAIL,
-        replyTo: app.email,
-        subject: `New PAID Hive Application: ${app.full_name}`,
-        html: `
-          <h2>New Tenant Application (Paid — $${(APPLICATION_FEE_CENTS / 100).toFixed(2)})</h2>
-          <table style="border-collapse:collapse;width:100%;max-width:600px;">
-            ${row('First Name', a.first_name)}
-            ${row('Last Name', a.last_name)}
-            ${row('Email', app.email)}
-            ${row('Phone', app.phone)}
-            ${row('Birthdate', a.birthdate)}
-            ${row('SSN (last 4)', a.ssn_last4 ? `***-**-${a.ssn_last4}` : null)}
-            ${row('LinkedIn / Instagram', a.social_profile ? `<a href="${a.social_profile.startsWith('http') ? a.social_profile : 'https://' + a.social_profile}" style="color:#d4920b;">${a.social_profile}</a>` : null)}
-            ${row('Photo ID — Front', idCell(frontLink))}
-            ${row('Photo ID — Back', idCell(backLink))}
-            ${row('Emergency Contact', a.emergency_contact_name)}
-            ${row('Emergency — Phone', a.emergency_contact_phone)}
-            ${row('Emergency — Email', a.emergency_contact_email)}
-            ${row('Emergency — Relationship', a.emergency_contact_relationship)}
-          </table>
-          <p style="margin-top:20px;color:#888;font-size:12px;">Payment confirmed via Stripe · Application #${app.id} · Stripe Identity verification pending (you'll get a follow-up email with the result)</p>`
-      });
-    } catch (mailErr) {
-      console.error('[mail] Failed to send paid-application notification:', mailErr.message);
-    }
-
-    // Confirmation to the applicant (best-effort).
-    try {
-      await sendMail({
-        to: app.email,
-        subject: 'We received your Hive application',
-        html: confirmationHtml(`Thanks for applying, ${app.full_name}!`, [
-          `We have received your application and your $${(APPLICATION_FEE_CENTS / 100).toFixed(2)} application fee.`,
-          'One step remains: a quick identity verification, handled securely by Stripe Identity. Use the "Verify My Identity" button on the confirmation page (you\'ll need your government ID and a device with a camera).',
-          'After that, our team will review your application and reach out with next steps.',
-          'In the meantime, feel free to browse our latest listings at <a href="https://hiveny.com/properties" style="color: #d4920b;">hiveny.com/properties</a>.'
-        ])
-      });
-    } catch (mailErr) {
-      console.error('[mail] Failed to send applicant confirmation:', mailErr.message);
     }
 
     renderResult('paid', {

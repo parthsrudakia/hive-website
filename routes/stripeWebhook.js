@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 const { sendMail, NOTIFY_EMAIL } = require('../utils/mailer');
+const { finalizePaidApplication } = require('../utils/tenantApplication');
 
-// Stripe webhook receiver — currently handles Stripe Identity verification
-// outcomes for the paid tenant application. Document checks are asynchronous
-// (they can finish minutes after the applicant leaves the hosted flow), so the
-// webhook is the source of truth for the final verification status.
+// Stripe webhook receiver for the paid tenant application:
+//
+// - checkout.session.completed finalizes the payment server-side, so an
+//   applicant who pays but never returns to the site (closed tab, dropped
+//   connection) still gets recorded as paid and emailed.
+// - identity.verification_session.* events record Stripe Identity outcomes.
+//   Document checks are asynchronous (they can finish minutes after the
+//   applicant leaves the hosted flow), so the webhook is the source of truth
+//   for the final verification status.
 //
 // IMPORTANT: this router is mounted in server.js BEFORE express.json() /
 // express.urlencoded(), because Stripe signature verification needs the raw,
@@ -50,6 +56,16 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
   try {
     switch (event.type) {
+      case 'checkout.session.completed': {
+        // Same finalizer as the return page; the guarded UPDATE inside makes
+        // whichever fires second a no-op, so emails are only sent once.
+        const app = await finalizePaidApplication(event.data.object);
+        if (app) {
+          console.log(`[stripe-webhook] Finalized paid application #${app.id} via checkout.session.completed`);
+        }
+        break;
+      }
+
       case 'identity.verification_session.verified': {
         const session = event.data.object;
         const app = await updateIdentityStatus(session.id, 'verified', { verified: true });
