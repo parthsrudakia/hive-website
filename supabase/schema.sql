@@ -93,15 +93,11 @@ CREATE TABLE IF NOT EXISTS landlord_inquiries (
 );
 
 -- Default admin user ------------------------------------------
--- Email:    admin@hiveny.com
--- Password: hiveny2026   (CHANGE THIS after first login)
-INSERT INTO admin_users (email, password_hash, name)
-VALUES (
-  'admin@hiveny.com',
-  '$2a$10$xPiTlJftMH1GqCXy3TYLJuOo3/daCrxYXbP/C3rv9aYUItFb62GBe',
-  'Hive Admin'
-)
-ON CONFLICT (email) DO NOTHING;
+-- Created by the seed script, never by this schema file:
+--   ADMIN_SEED_PASSWORD=<your-password> node db/seed.js
+-- (Without ADMIN_SEED_PASSWORD a random password is generated and printed
+-- once.) Change or reset it any time from /admin/account or the login page's
+-- "Forgot password?" link.
 
 -- Note: the express-session store table ("session") is created automatically
 -- at runtime by connect-pg-simple (createTableIfMissing: true).

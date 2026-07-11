@@ -3,9 +3,12 @@ const bcrypt = require('bcryptjs');
 
 async function seed() {
   try {
-    // Create default admin user
-    const passwordHash = await bcrypt.hash('hiveny2026', 10);
-    await pool.query(`
+    // Create the default admin user. The password comes from ADMIN_SEED_PASSWORD,
+    // or is randomly generated and printed once — never hardcoded here.
+    const seedPassword = process.env.ADMIN_SEED_PASSWORD
+      || require('crypto').randomBytes(12).toString('base64url');
+    const passwordHash = await bcrypt.hash(seedPassword, 10);
+    const { rowCount: adminCreated } = await pool.query(`
       INSERT INTO admin_users (email, password_hash, name)
       VALUES ($1, $2, $3)
       ON CONFLICT (email) DO NOTHING
@@ -169,7 +172,14 @@ async function seed() {
     }
 
     console.log('Seed data inserted successfully.');
-    console.log('Admin login: admin@hiveny.com / hiveny2026');
+    if (adminCreated) {
+      console.log(`Admin login: admin@hiveny.com / ${seedPassword}`);
+      if (!process.env.ADMIN_SEED_PASSWORD) {
+        console.log('(Password was randomly generated — save it now, or change it after first login.)');
+      }
+    } else {
+      console.log('Admin user already exists — password unchanged.');
+    }
     process.exit(0);
   } catch (err) {
     console.error('Error seeding database:', err);

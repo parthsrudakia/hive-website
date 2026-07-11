@@ -51,8 +51,11 @@ node db/seed.js
 
 ### Admin Access
 - **URL:** `/admin`
-- **Default login:** `admin@hiveny.com` / `hiveny2026`
-- Change the password after first login.
+- **Login:** `admin@hiveny.com` — the password is set when seeding
+  (`ADMIN_SEED_PASSWORD=<your-password> node db/seed.js`, or a random one is
+  generated and printed once).
+- Change it any time from **/admin/account**, or use the login page's
+  **Forgot password?** link (emails a reset link to the site owner).
 
 ---
 

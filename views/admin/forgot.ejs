@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Admin - Forgot Password</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1a18;
+      --cream: #f5f2ed;
+      --accent: #d4920b;
+      --accent-dark: #b87d09;
+      --white: #fefdfb;
+      --muted: #8a8378;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: var(--white);
+      border: 1px solid #e0ddd7;
+      border-radius: 8px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 2px 12px rgba(26, 26, 24, 0.06);
+    }
+    .login-brand { text-align: center; margin-bottom: 24px; }
+    .login-brand h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px; font-weight: 600; color: var(--ink); letter-spacing: 1px;
+    }
+    .login-brand span {
+      display: block; font-size: 12px; font-weight: 500; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;
+    }
+    .intro { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; text-align: center; }
+    .error-message {
+      background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+      border-radius: 6px; padding: 12px 16px; font-size: 14px; margin-bottom: 24px;
+    }
+    .success-message {
+      background: #ecf7ed; color: #1f7a32; border: 1px solid #c9e8cd;
+      border-radius: 6px; padding: 12px 16px; font-size: 14px; margin-bottom: 24px; line-height: 1.5;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+    .form-group input {
+      width: 100%; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px;
+      border: 1px solid #d4d0c8; border-radius: 6px; background: var(--white); color: var(--ink);
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--accent-dark); box-shadow: 0 0 0 3px rgba(230, 210, 0, 0.15); }
+    .btn-login {
+      width: 100%; padding: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+      background: var(--ink); color: var(--white); border: none; border-radius: 6px; cursor: pointer;
+      transition: background-color 0.2s; margin-top: 8px;
+    }
+    .btn-login:hover { background: #333330; }
+    .back-link {
+      display: block; text-align: center; margin-top: 18px;
+      font-size: 13px; color: var(--muted); text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent-dark); }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-brand">
+      <h1>Hive</h1>
+      <span>Forgot Password</span>
+    </div>
+
+    <% if (error) { %>
+      <div class="error-message"><%= error %></div>
+    <% } %>
+
+    <% if (sent) { %>
+      <div class="success-message">If that account exists, a password reset link has been emailed to the site owner. The link works once and expires in 1 hour.</div>
+      <a href="/admin/login" class="back-link">Back to sign in</a>
+    <% } else { %>
+      <p class="intro">Enter your admin email. A reset link will be sent to the site owner's inbox.</p>
+      <form method="POST" action="/admin/forgot">
+        <div class="form-group">
+          <label for="email">Admin Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="admin@hiveny.com">
+        </div>
+        <button type="submit" class="btn-login">Send Reset Link</button>
+      </form>
+      <a href="/admin/login" class="back-link">Back to sign in</a>
+    <% } %>
+  </div>
+</body>
+</html>

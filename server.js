@@ -114,7 +114,10 @@ app.use(session({
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_status VARCHAR(30) NOT NULL DEFAULT 'not_started'`,
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_verified_at TIMESTAMP`,
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_last_error TEXT`,
-      `CREATE INDEX IF NOT EXISTS tenant_applications_identity_idx ON tenant_applications (identity_session_id)`
+      `CREATE INDEX IF NOT EXISTS tenant_applications_identity_idx ON tenant_applications (identity_session_id)`,
+      // Forgot-password flow: a hashed single-use reset token + expiry.
+      `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR(64)`,
+      `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`
     ];
     for (const sql of migrations) {
       await pool.query(sql);

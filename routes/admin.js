@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const multer = require('multer');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const pool = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
+const { sendMail, NOTIFY_EMAIL } = require('../utils/mailer');
+const PgRateLimitStore = require('../utils/pgRateLimitStore');
 
 // --- Multer config for image uploads ---
 // Files are kept in memory, then handed to storeImage() which writes them to
@@ -61,6 +65,127 @@ router.get('/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/admin/login');
   });
+});
+
+// --- Forgot / Reset Password ---
+// The reset link is ALWAYS emailed to the site owner (NOTIFY_EMAIL), never to
+// the address typed into the form, so this can't be abused to hijack the
+// account or to relay mail to arbitrary addresses. Tokens are single-use,
+// stored only as a SHA-256 hash, and expire after 1 hour.
+
+const RESET_TOKEN_TTL_MINUTES = 60;
+
+// Tight cap: a public endpoint that triggers outbound email.
+const forgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'admin-forgot', windowMs: 15 * 60 * 1000 }),
+  handler: (req, res) => res.status(429).render('admin/forgot', {
+    sent: false,
+    error: 'Too many reset requests. Please wait a few minutes and try again.'
+  })
+});
+
+// Looks up the admin a valid, unexpired reset token belongs to.
+async function findAdminByResetToken(token) {
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) return null;
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const { rows } = await pool.query(
+    `SELECT id, email, name FROM admin_users
+      WHERE reset_token_hash = $1 AND reset_token_expires > NOW()`,
+    [tokenHash]
+  );
+  return rows[0] || null;
+}
+
+router.get('/forgot', (req, res) => {
+  res.render('admin/forgot', { sent: false, error: null });
+});
+
+router.post('/forgot', forgotLimiter, async (req, res) => {
+  const email = (req.body.email || '').trim();
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, email FROM admin_users WHERE lower(email) = lower($1)', [email]
+    );
+    if (rows.length > 0) {
+      const admin = rows[0];
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      await pool.query(
+        `UPDATE admin_users
+            SET reset_token_hash = $1,
+                reset_token_expires = NOW() + ($2 || ' minutes')::interval
+          WHERE id = $3`,
+        [tokenHash, String(RESET_TOKEN_TTL_MINUTES), admin.id]
+      );
+      const resetUrl = `${req.protocol}://${req.get('host')}/admin/reset?token=${token}`;
+      try {
+        await sendMail({
+          to: NOTIFY_EMAIL,
+          subject: 'Hive Admin — password reset link',
+          html: `
+            <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a18;">
+              <h2>Reset the Hive admin password</h2>
+              <p style="line-height:1.6;color:#444;">A password reset was requested for <strong>${admin.email}</strong> on the Hive admin panel.</p>
+              <p style="line-height:1.6;color:#444;"><a href="${resetUrl}" style="color:#b87d09;">Set a new password</a> — this link works once and expires in ${RESET_TOKEN_TTL_MINUTES} minutes.</p>
+              <p style="margin-top:20px;color:#888;font-size:12px;">If you didn't request this, you can ignore this email — the current password still works.</p>
+            </div>`
+        });
+      } catch (mailErr) {
+        console.error('[mail] Failed to send password-reset email:', mailErr.message);
+      }
+    }
+    // Same response whether or not the account exists — don't leak which
+    // emails have admin accounts.
+    res.render('admin/forgot', { sent: true, error: null });
+  } catch (err) {
+    console.error('Forgot-password error:', err);
+    res.render('admin/forgot', { sent: false, error: 'Something went wrong. Please try again.' });
+  }
+});
+
+router.get('/reset', async (req, res) => {
+  try {
+    const admin = await findAdminByResetToken(req.query.token);
+    res.render('admin/reset', { valid: !!admin, token: admin ? req.query.token : null, error: null });
+  } catch (err) {
+    console.error('Reset-page error:', err);
+    res.render('admin/reset', { valid: false, token: null, error: null });
+  }
+});
+
+router.post('/reset', async (req, res) => {
+  const { token, new_password, confirm_password } = req.body;
+  const render = (opts) => res.render('admin/reset', Object.assign(
+    { valid: true, token, error: null }, opts
+  ));
+  try {
+    const admin = await findAdminByResetToken(token);
+    if (!admin) {
+      return res.render('admin/reset', { valid: false, token: null, error: null });
+    }
+    if (!new_password || new_password.length < 8) {
+      return render({ error: 'New password must be at least 8 characters.' });
+    }
+    if (new_password !== confirm_password) {
+      return render({ error: 'New password and confirmation do not match.' });
+    }
+
+    const newHash = await bcrypt.hash(new_password, 10);
+    await pool.query(
+      `UPDATE admin_users
+          SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL
+        WHERE id = $2`,
+      [newHash, admin.id]
+    );
+    res.render('admin/login', { error: null, success: 'Password updated — sign in with your new password.' });
+  } catch (err) {
+    console.error('Reset-password error:', err);
+    render({ error: 'Something went wrong. Please try again.' });
+  }
 });
 
 // --- Account / Change Password ---

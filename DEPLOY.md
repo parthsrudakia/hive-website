@@ -11,7 +11,9 @@ the Postgres database and image storage.
 1. Create a project at https://supabase.com → **New project**.
 2. **Database schema** — open **SQL Editor → New query**, paste the contents of
    [`supabase/schema.sql`](supabase/schema.sql), and **Run**. This creates all
-   tables and a default admin (`admin@hiveny.com` / `hiveny2026` — change it).
+   tables. Then create the admin user by running the seed script locally:
+   `ADMIN_SEED_PASSWORD=<your-password> node db/seed.js` (omit the variable to
+   have a random password generated and printed once).
 3. **Storage bucket** — go to **Storage → New bucket**, name it `listings`, and
    mark it **Public**. (Uploaded listing images are served from here.)
 4. Collect these values (you'll paste them into Vercel in step 2):

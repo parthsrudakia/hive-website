@@ -34,7 +34,9 @@ The site is live at: **https://hiveny.com** (or https://hive-app-production-6bea
 1. Go to **hiveny.com/admin** (or the Railway URL + /admin)
 2. Log in with:
    - **Email:** admin@hiveny.com
-   - **Password:** hiveny2026
+   - **Password:** set at seed time (see README). Change it from
+     **/admin/account**, or reset it via the login page's **Forgot password?**
+     link (sends a reset email to the site owner).
 3. From the dashboard you can:
    - Add new apartment listings
    - Edit or delete existing listings
