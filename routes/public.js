@@ -9,6 +9,10 @@ const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { mintFormToken, checkFormGuards, turnstileEnabled } = require('../utils/formGuard');
 const { getGoogleReviews } = require('../utils/googleReviews');
 const { storePrivateFile } = require('../utils/storage');
+const { rewriteListingImages, proxyImage } = require('../utils/imageProxy');
+
+// Cached, CDN-friendly proxy for listing photos — see utils/imageProxy.js.
+router.get('/img/:name', proxyImage);
 
 // ---------------------------------------------------------------------------
 // Abuse protection for public form submissions.
@@ -210,6 +214,7 @@ router.get('/', async (req, res) => {
     // Fetch Google reviews (cached, won't slow down page load)
     const googleReviews = await getGoogleReviews();
 
+    listings.forEach(rewriteListingImages);
     res.render('public/index', { featuredListings: listings, googleReviews });
   } catch (err) {
     console.error('Error loading homepage:', err);
@@ -228,6 +233,7 @@ router.get('/properties', async (req, res) => {
       const m = url && url.match(/drive\.google\.com\/(?:uc\?export=view&id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/);
       return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w2000` : url;
     }); });
+    listings.forEach(rewriteListingImages);
     res.render('public/properties', { listings });
   } catch (err) {
     console.error('Error loading properties:', err);
@@ -276,6 +282,8 @@ router.get('/properties/:id', async (req, res) => {
     if (listing.images) listing.images = listing.images.map(fixDriveUrl);
     if (listing.floor_plan_image) listing.floor_plan_image = fixDriveUrl(listing.floor_plan_image);
     relatedListings.forEach(r => { if (r.images) r.images = r.images.map(fixDriveUrl); });
+    rewriteListingImages(listing);
+    relatedListings.forEach(rewriteListingImages);
 
     res.render('public/listing-detail', { listing, relatedListings, bookings });
   } catch (err) {

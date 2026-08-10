@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { rewriteListingImages } = require('../utils/imageProxy');
 
 router.get('/listings', async (req, res) => {
   try {
@@ -39,7 +40,7 @@ router.get('/listings', async (req, res) => {
     // Strip identifying fields (building name + exact address) from the public API;
     // expose only the anonymized public title.
     const publicTitle = req.app.locals.publicTitle;
-    const listings = rows.map(({ title, address, ...rest }) => ({
+    const listings = rows.map(({ title, address, ...rest }) => rewriteListingImages({
       ...rest,
       public_title: publicTitle ? publicTitle({ title, address, ...rest }) : undefined
     }));
