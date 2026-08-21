@@ -1,0 +1,25 @@
+<% var meta = (typeof seo !== 'undefined' && seo) ? seo : {}; %>
+<title><%= meta.title || 'Hive | City Living, Made Simple' %></title>
+<meta name="description" content="<%= meta.description || 'Move-in ready, fully furnished apartments with flexible lease terms and no broker fees.' %>">
+<meta name="robots" content="<%= meta.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' %>">
+<meta name="author" content="Hive">
+<meta name="theme-color" content="#1a1a18">
+<link rel="canonical" href="<%= meta.canonical || 'https://www.hiveny.com/' %>">
+<link rel="alternate" hreflang="en-US" href="<%= meta.canonical || 'https://www.hiveny.com/' %>">
+<link rel="alternate" hreflang="x-default" href="<%= meta.canonical || 'https://www.hiveny.com/' %>">
+<meta property="og:site_name" content="Hive">
+<meta property="og:type" content="<%= meta.type || 'website' %>">
+<meta property="og:title" content="<%= meta.title || 'Hive | City Living, Made Simple' %>">
+<meta property="og:description" content="<%= meta.description || '' %>">
+<meta property="og:url" content="<%= meta.canonical || 'https://www.hiveny.com/' %>">
+<meta property="og:image" content="<%= meta.image || 'https://www.hiveny.com/images/hero-1.jpg' %>">
+<meta property="og:image:alt" content="<%= meta.imageAlt || 'A furnished Hive apartment' %>">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= meta.title || 'Hive | City Living, Made Simple' %>">
+<meta name="twitter:description" content="<%= meta.description || '' %>">
+<meta name="twitter:image" content="<%= meta.image || 'https://www.hiveny.com/images/hero-1.jpg' %>">
+<% if (meta.googleSiteVerification) { %><meta name="google-site-verification" content="<%= meta.googleSiteVerification %>"><% } %>
+<% if (meta.bingSiteVerification) { %><meta name="msvalidate.01" content="<%= meta.bingSiteVerification %>"><% } %>
+<% if (meta.structuredData) { %>
+<script type="application/ld+json"><%- safeJson(meta.structuredData) %></script>
+<% } %>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<%- include('../partials/seo-head') %>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#1a1a18; --muted:#6d6b65; --cream:#f7f3ec; --gold:#d4920b; --line:#e6dfd4; }
+  * { box-sizing:border-box; }
+  body { margin:0; color:var(--ink); background:#fefdfb; font-family:'DM Sans',sans-serif; line-height:1.75; }
+  a { color:inherit; }
+  .nav { border-bottom:1px solid var(--line); background:rgba(254,253,251,.96); position:sticky; top:0; z-index:10; }
+  .nav-inner,.wrap,.footer-inner { width:min(1120px,calc(100% - 40px)); margin:auto; }
+  .nav-inner { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+  .brand { text-decoration:none; display:flex; align-items:center; gap:10px; }
+  .brand svg { width:22px; height:28px; }
+  .brand-name { display:block; font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:600; line-height:1; }
+  .brand-tag { display:block; color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.12em; margin-top:3px; }
+  .nav-links { display:flex; align-items:center; gap:26px; font-size:14px; }
+  .nav-links a { text-decoration:none; }
+  .nav-cta { color:#fff!important; background:var(--ink); padding:10px 16px; border-radius:2px; }
+  .hero { background:var(--cream); border-bottom:1px solid var(--line); padding:76px 0 66px; }
+  .eyebrow { color:#a56f08; text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:600; }
+  h1 { font-family:'Cormorant Garamond',serif; font-size:clamp(46px,7vw,74px); font-weight:500; line-height:1; margin:14px 0 16px; }
+  .updated { color:var(--muted); font-size:14px; }
+  main { max-width:800px!important; padding:64px 0 90px; }
+  .intro { font-size:18px; color:#4d4b46; margin:0 0 42px; }
+  h2 { font-family:'Cormorant Garamond',serif; font-size:32px; line-height:1.2; margin:46px 0 12px; }
+  p { margin:0 0 16px; }
+  ul { margin:10px 0 20px; padding-left:24px; }
+  li { margin:8px 0; }
+  main a { color:#8c5e07; text-underline-offset:3px; }
+  .note { margin-top:46px; padding:22px 24px; background:var(--cream); border-left:3px solid var(--gold); }
+  footer { border-top:1px solid var(--line); padding:34px 0; color:var(--muted); font-size:13px; }
+  .footer-inner { display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .footer-links { display:flex; gap:20px; flex-wrap:wrap; }
+  @media (max-width:720px) { .nav-links a:not(.nav-cta){display:none} .hero{padding:54px 0 48px} main{padding-top:44px} }
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="Primary navigation">
+  <div class="nav-inner">
+    <a href="/" class="brand" aria-label="Hive home">
+      <svg viewBox="0 0 80 100" aria-hidden="true"><circle cx="40" cy="8" r="4.5" fill="#d4920b"/><rect x="28" y="18" width="24" height="6" rx="3" fill="#d4920b"/><rect x="18" y="32" width="44" height="6" rx="3" fill="#d4920b"/><rect x="15" y="46" width="50" height="6" rx="3" fill="#d4920b"/><rect x="18" y="60" width="44" height="6" rx="3" fill="#d4920b"/><rect x="28" y="74" width="24" height="6" rx="3" fill="#d4920b"/><circle cx="40" cy="88" r="4" fill="#d4920b"/></svg>
+      <span><span class="brand-name">Hive</span><span class="brand-tag">City Living, Made Simple</span></span>
+    </a>
+    <div class="nav-links"><a href="/properties">Properties</a><a href="/partners">For Landlords</a><a class="nav-cta" href="/contact">Contact Us</a></div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Hive policies</div>
+    <h1><%= page === 'privacy' ? 'Privacy Policy' : 'Terms of Service' %></h1>
+    <div class="updated">Last updated August 21, 2026</div>
+  </div>
+</header>
+
+<main class="wrap">
+<% if (page === 'privacy') { %>
+  <p class="intro">This policy explains what Hive collects when you browse our website, contact us, submit a rental or partnership inquiry, or complete a paid tenant application—and how we use and protect that information.</p>
+
+  <h2>Information we collect</h2>
+  <p>Depending on how you use Hive, we may collect:</p>
+  <ul>
+    <li>Contact and inquiry details, such as your name, email, phone number, message, housing preferences, move dates, property information, and referral source.</li>
+    <li>Tenant application details, including date of birth, the last four digits of a Social Security number, social-profile information, emergency-contact details, and uploaded identity documents.</li>
+    <li>Payment and identity-verification status. Payment-card details and hosted identity checks are handled by Stripe; Hive receives transaction, verification, and status information needed to administer an application.</li>
+    <li>Technical and security data, such as IP address, browser and device information, form-security signals, server logs, and website usage data.</li>
+  </ul>
+
+  <h2>How we use information</h2>
+  <p>We use information to respond to inquiries, match prospective residents with homes, process and review applications, accept application fees, verify identity, communicate about services, support residents and partners, prevent abuse, secure the website, comply with legal obligations, and improve Hive.</p>
+
+  <h2>How information is shared</h2>
+  <p>We may share information with service providers that help operate Hive, including hosting, database and storage, payments and identity verification, email delivery, bot prevention, maps, analytics, and customer-support providers. These currently may include Vercel, Supabase, Stripe, Resend, Cloudflare, and Google services. We may also disclose information when required by law, to protect rights and safety, in connection with a business transaction, or with your direction.</p>
+  <p>Hive does not sell personal information for money.</p>
+
+  <h2>Security and retention</h2>
+  <p>We use administrative and technical safeguards appropriate to the information we handle. Uploaded identification is stored separately from public listing media and is not intentionally made public. No internet service can guarantee absolute security.</p>
+  <p>We retain information for as long as reasonably needed for the purposes described here, including application administration, fraud prevention, recordkeeping, dispute resolution, and legal compliance, then delete or de-identify it when appropriate.</p>
+
+  <h2>Your choices</h2>
+  <p>You may ask to access, correct, or delete personal information, or opt out of non-essential communications, by emailing <a href="mailto:hello@hiveny.com">hello@hiveny.com</a>. We may need to verify your identity and may retain information when legally permitted or required. Rights can vary by where you live.</p>
+
+  <h2>Children and changes</h2>
+  <p>Hive is not directed to children under 13. Tenant applications are intended for adults age 18 or older. We may update this policy as our practices or legal obligations change; the date above shows the latest revision.</p>
+
+  <div class="note"><strong>Privacy questions?</strong> Email <a href="mailto:hello@hiveny.com">hello@hiveny.com</a>.</div>
+<% } else { %>
+  <p class="intro">These terms govern your use of the Hive website, property listings, inquiry forms, and tenant-application services. By using the website, you agree to these terms.</p>
+
+  <h2>Website use and eligibility</h2>
+  <p>You may use Hive only for lawful purposes. You may not interfere with the website, attempt unauthorized access, submit false or misleading information, scrape the service in a way that burdens our systems, impersonate another person, or use our forms to distribute spam. A paid tenant application may be submitted only by someone age 18 or older who is authorized to provide the information submitted.</p>
+
+  <h2>Listings and availability</h2>
+  <p>Listing content is provided for general information. Prices, availability, amenities, furnishings, photographs, approximate locations, and lease terms may change and should be confirmed with Hive. A listing, inquiry response, or application submission is not a reservation, lease, approval, or guarantee of housing. Any tenancy is governed by a separate written agreement.</p>
+
+  <h2>Applications and fees</h2>
+  <p>You agree that application information will be accurate and complete. Hive may request additional documentation and use third-party services to process payment and verify identity. The application processing fee shown before checkout is non-refundable except where applicable law requires otherwise. Paying a fee does not guarantee approval or a particular apartment.</p>
+
+  <h2>Third-party services</h2>
+  <p>The website may link to or use services operated by other companies, including payment, identity, mapping, video, storage, and review providers. Their own terms and privacy policies apply to their services. Hive is not responsible for third-party websites or services outside our control.</p>
+
+  <h2>Intellectual property</h2>
+  <p>Hive and its licensors own the website’s design, text, branding, graphics, and other content except where stated otherwise. You may use the website for personal, non-commercial housing or partnership inquiries, but may not copy, republish, sell, or exploit its content without permission.</p>
+
+  <h2>Disclaimers and limitation</h2>
+  <p>The website is provided on an “as available” basis. To the fullest extent permitted by law, Hive disclaims implied warranties relating to the website and is not liable for indirect, incidental, special, consequential, or punitive damages arising from its use. Nothing in these terms excludes rights or liabilities that cannot legally be excluded.</p>
+
+  <h2>Changes and contact</h2>
+  <p>We may update these terms and will post the revised version with a new effective date. Continued use after an update means you accept the revised terms. If one provision is unenforceable, the remaining provisions continue to apply.</p>
+
+  <div class="note"><strong>Questions about these terms?</strong> Email <a href="mailto:hello@hiveny.com">hello@hiveny.com</a>.</div>
+<% } %>
+</main>
+
+<footer><div class="footer-inner"><span>&copy; 2026 Hive. All rights reserved.</span><div class="footer-links"><a href="/properties">Properties</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="mailto:hello@hiveny.com">hello@hiveny.com</a></div></div></footer>
+</body>
+</html>

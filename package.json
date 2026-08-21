@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Haven Residences wireframe",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"
@@ -18,7 +19,6 @@
     "express-rate-limit": "^7.5.1",
     "express-session": "^1.19.0",
     "multer": "^2.0.2",
-    "nodemailer": "^8.0.1",
     "pg": "^8.18.0",
     "sharp": "^0.35.2",
     "stripe": "^22.2.3"

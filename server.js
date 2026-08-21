@@ -5,9 +5,11 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const pool = require('./db/pool');
+const { safeJson, buildSeo } = require('./utils/seo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.disable('x-powered-by');
 
 // Trust Railway's reverse proxy (needed for secure cookies over HTTPS)
 app.set('trust proxy', 1);
@@ -15,6 +17,16 @@ app.set('trust proxy', 1);
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.locals.safeJson = safeJson;
+
+// Private application, API, webhook, and admin responses must never become
+// search results, even if a crawler discovers one of their URLs elsewhere.
+app.use((req, res, next) => {
+  if (/^\/(admin|api|webhooks)(\/|$)/.test(req.path)) {
+    res.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  }
+  next();
+});
 
 // Stripe webhooks must be mounted BEFORE the body parsers: signature
 // verification needs the raw request body, which express.json() would consume.
@@ -162,6 +174,17 @@ app.locals.applicationFeeCents = parseInt(process.env.APPLICATION_FEE_CENTS || '
 app.use('/', require('./routes/public'));
 app.use('/admin', require('./routes/admin'));
 app.use('/api', require('./routes/api'));
+
+app.use((req, res) => {
+  res.status(404).render('public/404', {
+    seo: buildSeo(req, {
+      title: 'Page Not Found | Hive',
+      description: 'The page you requested could not be found. Browse available furnished apartments or return to the Hive homepage.',
+      canonicalPath: req.path,
+      noindex: true
+    })
+  });
+});
 
 // Start a long-running server only when invoked directly (local dev, Railway).
 // On Vercel the app is imported by api/index.js and served as a serverless function.

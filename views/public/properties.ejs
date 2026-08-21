@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Properties | Hive</title>
+<%- include('../partials/seo-head') %>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -506,7 +506,7 @@ body {
     <div class="page-header-inner">
       <div>
         <div class="section-tag">Our Residences</div>
-        <h1>Find your next <em>home.</em></h1>
+        <h1>Find your next <em>home<%= filters.location ? ' in ' + filters.location : '' %>.</em></h1>
         <p>Fully furnished, move-in ready apartments across the country. Flexible terms, no broker fees.</p>
       </div>
     </div>
@@ -515,52 +515,52 @@ body {
 
 <!-- BROWSE / SEARCH -->
 <div class="container">
-  <div class="browse-bar reveal">
+  <form class="browse-bar reveal" action="/properties" method="GET" aria-label="Search available apartments">
     <div class="browse-field">
-      <label>Location</label>
-      <select id="filter-location">
+      <label for="filter-location">Location</label>
+      <select id="filter-location" name="location">
         <option value="">All Locations</option>
-        <option value="New York">New York</option>
-        <option value="Los Angeles">Los Angeles</option>
-        <option value="Chicago">Chicago</option>
-        <option value="Miami">Miami</option>
-        <option value="San Francisco">San Francisco</option>
-        <option value="Washington DC">Washington DC</option>
-        <option value="Boston">Boston</option>
+        <% var knownLocations = ['New York', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco', 'Washington DC', 'Boston']; %>
+        <% if (filters.location && knownLocations.indexOf(filters.location) === -1) { %>
+        <option value="<%= filters.location %>" selected><%= filters.location %></option>
+        <% } %>
+        <% knownLocations.forEach(function(city) { %>
+        <option value="<%= city %>" <%= filters.location === city ? 'selected' : '' %>><%= city %></option>
+        <% }); %>
       </select>
     </div>
     <div class="browse-field">
-      <label>Bedrooms</label>
-      <select id="filter-bedrooms">
+      <label for="filter-bedrooms">Bedrooms</label>
+      <select id="filter-bedrooms" name="bedrooms">
         <option value="">Any</option>
-        <option value="0">Studio</option>
-        <option value="1">1 Bedroom</option>
-        <option value="2">2 Bedrooms</option>
-        <option value="3">3+ Bedrooms</option>
+        <option value="0" <%= filters.bedrooms === '0' ? 'selected' : '' %>>Studio</option>
+        <option value="1" <%= filters.bedrooms === '1' ? 'selected' : '' %>>1 Bedroom</option>
+        <option value="2" <%= filters.bedrooms === '2' ? 'selected' : '' %>>2 Bedrooms</option>
+        <option value="3" <%= filters.bedrooms === '3' ? 'selected' : '' %>>3+ Bedrooms</option>
       </select>
     </div>
     <div class="browse-field">
-      <label>Price Range</label>
-      <select id="filter-price">
+      <label for="filter-price">Price Range</label>
+      <select id="filter-price" name="price">
         <option value="">Any Budget</option>
-        <option value="0-3000">Under $3,000</option>
-        <option value="3000-4500">$3,000 – $4,500</option>
-        <option value="4500-6000">$4,500 – $6,000</option>
-        <option value="6000-999999">$6,000+</option>
+        <option value="0-3000" <%= filters.price === '0-3000' ? 'selected' : '' %>>Under $3,000</option>
+        <option value="3000-4500" <%= filters.price === '3000-4500' ? 'selected' : '' %>>$3,000 – $4,500</option>
+        <option value="4500-6000" <%= filters.price === '4500-6000' ? 'selected' : '' %>>$4,500 – $6,000</option>
+        <option value="6000-999999" <%= filters.price === '6000-999999' ? 'selected' : '' %>>$6,000+</option>
       </select>
     </div>
     <div class="browse-field browse-field-dates">
-      <label>Stay Dates <span class="label-hint">(30 days minimum)</span></label>
+      <label for="filter-movein">Stay Dates <span class="label-hint">(30 days minimum)</span></label>
       <div class="date-range">
-        <input type="date" id="filter-movein" aria-label="Move-in date" title="Move-in date">
-        <input type="date" id="filter-moveout" aria-label="Move-out date" title="Move-out date">
+        <input type="date" id="filter-movein" name="movein" value="<%= filters.movein %>" aria-label="Move-in date" title="Move-in date">
+        <input type="date" id="filter-moveout" name="moveout" value="<%= filters.moveout %>" aria-label="Move-out date" title="Move-out date">
       </div>
     </div>
     <div class="browse-field">
       <label>&nbsp;</label>
-      <button type="button" class="browse-btn" id="search-btn">Search</button>
+      <button type="submit" class="browse-btn" id="search-btn">Search</button>
     </div>
-  </div>
+  </form>
   <p class="stay-notice" id="stay-notice" hidden>
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5M12 16.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.4"/></svg>
     Heads up: a minimum stay of 30 days is required.
@@ -571,7 +571,7 @@ body {
 <section class="properties-section">
   <div class="container">
     <div class="properties-top">
-      <p class="properties-count">Showing <%= listings.length %> properties</p>
+      <p class="properties-count">Showing <%= listings.length %> <%= listings.length === 1 ? 'property' : 'properties' %></p>
     </div>
     <div class="properties-grid">
       <%
@@ -593,7 +593,7 @@ body {
       };
       %>
       <% listings.forEach(function(listing) { %>
-      <a href="/properties/<%= listing.id %>" class="property-card" style="text-decoration: none; color: inherit; display: block;" data-location="<%= listing.location || 'New York' %>" data-city="<%= listing.city %>" data-state="<%= listing.state %>" data-bedrooms="<%= listing.bedrooms %>" data-price="<%= listing.price_monthly %>" data-available-from="<%= fmtDate(listing.available_from) %>" data-available-to="<%= fmtDate(listing.available_to) %>">
+      <a href="/properties/<%= listing.id %><%= filters.movein || filters.moveout ? '?' + [filters.movein ? 'movein=' + encodeURIComponent(filters.movein) : '', filters.moveout ? 'moveout=' + encodeURIComponent(filters.moveout) : ''].filter(Boolean).join('&') : '' %>" class="property-card" style="text-decoration: none; color: inherit; display: block;" data-location="<%= listing.location || 'New York' %>" data-city="<%= listing.city %>" data-state="<%= listing.state %>" data-bedrooms="<%= listing.bedrooms %>" data-price="<%= listing.price_monthly %>" data-available-from="<%= fmtDate(listing.available_from) %>" data-available-to="<%= fmtDate(listing.available_to) %>">
         <div class="property-img">
           <% if (listing.images && listing.images.length > 0) { %>
           <div class="property-img-inner" style="background-image: url('<%= listing.images[0] %>'); background-size: cover; background-position: center;"></div>
@@ -604,7 +604,7 @@ body {
           <% if (listing.status !== 'available') { %>
           <span class="property-badge <%= listing.status === 'just_listed' ? 'badge-just-listed' : 'badge-soon' %>"><%= listing.status === 'just_listed' ? 'Just Listed' : 'Coming Soon' %></span>
           <% } %>
-          <span class="property-price">$<%= listing.price_monthly.toLocaleString() %><span> /month</span></span>
+          <span class="property-price">$<%= Number(listing.price_monthly || 0).toLocaleString('en-US') %><span> /month</span></span>
         </div>
         <div class="property-info">
           <h3><%= publicTitle(listing) %></h3>
@@ -625,7 +625,7 @@ body {
       <% }); %>
       <% if (listings.length === 0) { %>
       <div style="grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted);">
-        <p style="font-size: 1.1rem;">No properties available at the moment. Check back soon!</p>
+        <p style="font-size: 1.1rem;">No properties match these filters. Try a different city, date range, or budget.</p>
       </div>
       <% } %>
     </div>
@@ -659,14 +659,14 @@ body {
         <a href="/contact">Contact Us</a>
         <a href="/faq">FAQ</a>
         <a href="/partners">Partner With Us</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/privacy">Privacy Policy</a>
         <a href="/admin/login">Admin Login</a>
       </div>
     </div>
     <div class="footer-bottom">
       <p>&copy; 2026 Hive. All rights reserved.</p>
-      <a href="#">hello@hiveny.com</a>
+      <a href="mailto:hello@hiveny.com">hello@hiveny.com</a>
     </div>
   </div>
 </footer>
@@ -712,81 +712,6 @@ if (mobileBtn) {
   });
 }
 
-// Search / Filter
-function runSearch() {
-  var loc = document.getElementById('filter-location').value;
-  var bedrooms = document.getElementById('filter-bedrooms').value;
-  var price = document.getElementById('filter-price').value;
-  var moveIn = document.getElementById('filter-movein').value;   // YYYY-MM-DD or ''
-  var moveOut = document.getElementById('filter-moveout').value; // YYYY-MM-DD or ''
-  var cards = document.querySelectorAll('.property-card');
-  var count = 0;
-
-  cards.forEach(function(card) {
-    var show = true;
-
-    // Location filter
-    if (loc && card.dataset.location !== loc) {
-      show = false;
-    }
-
-    // Bedrooms filter
-    if (bedrooms) {
-      var cardBed = parseInt(card.dataset.bedrooms);
-      var filterBed = parseInt(bedrooms);
-      if (filterBed === 3) {
-        if (cardBed < 3) show = false;
-      } else {
-        if (cardBed !== filterBed) show = false;
-      }
-    }
-
-    // Price filter
-    if (price) {
-      var parts = price.split('-');
-      var min = parseInt(parts[0]);
-      var max = parseInt(parts[1]);
-      var cardPrice = parseInt(card.dataset.price);
-      if (cardPrice < min || cardPrice > max) show = false;
-    }
-
-    // Stay-dates filter: a room matches when its availability window covers the
-    // requested stay. Date strings are YYYY-MM-DD, so string comparison is chronological.
-    // An empty availability bound means open-ended (room shows for any dates).
-    if (moveIn || moveOut) {
-      var availFrom = card.dataset.availableFrom;
-      var availTo = card.dataset.availableTo;
-      if (moveIn) {
-        if (availFrom && availFrom > moveIn) show = false; // not available until after move-in
-        if (availTo && availTo < moveIn) show = false;     // window ends before move-in
-      }
-      if (moveOut) {
-        if (availTo && availTo < moveOut) show = false;    // window ends before move-out
-        if (availFrom && availFrom > moveOut) show = false;// window starts after move-out
-      }
-    }
-
-    card.style.display = show ? '' : 'none';
-    if (show) count++;
-
-    // Carry the chosen stay dates onto the listing link so they pre-fill there.
-    var base = card.getAttribute('href').split('?')[0];
-    var params = [];
-    if (moveIn) params.push('movein=' + encodeURIComponent(moveIn));
-    if (moveOut) params.push('moveout=' + encodeURIComponent(moveOut));
-    card.setAttribute('href', params.length ? base + '?' + params.join('&') : base);
-  });
-
-  // Update count
-  var countEl = document.querySelector('.properties-count');
-  if (countEl) {
-    countEl.textContent = 'Showing ' + count + ' propert' + (count === 1 ? 'y' : 'ies');
-  }
-}
-var searchBtn = document.getElementById('search-btn');
-searchBtn.addEventListener('click', runSearch);
-searchBtn.addEventListener('touchend', function(e) { e.preventDefault(); runSearch(); });
-
 // Stay-date pickers: block past dates and enforce the 30-day minimum stay by
 // keeping move-out at least 30 days after move-in.
 (function() {
@@ -816,30 +741,12 @@ searchBtn.addEventListener('touchend', function(e) { e.preventDefault(); runSear
     // Move-out must be at least 30 days after the chosen move-in date.
     moveOut.min = moveIn.value ? addDays(moveIn.value, 30) : today;
     enforceMinStay();
-    runSearch();
   });
   moveOut.addEventListener('change', function() {
     enforceMinStay();
-    runSearch();
   });
-})();
-
-// Pre-filter by location from the URL (e.g. /properties?location=Los%20Angeles)
-(function() {
-  var loc = new URLSearchParams(window.location.search).get('location');
-  if (!loc) return;
-  var sel = document.getElementById('filter-location');
-  var match = Array.prototype.find.call(sel.options, function(o) { return o.value === loc; });
-  if (!match) {
-    // City not in the static dropdown (e.g. a new market) — add it so the
-    // footer's dynamic city links always filter correctly.
-    var opt = document.createElement('option');
-    opt.value = loc;
-    opt.textContent = loc;
-    sel.appendChild(opt);
-  }
-  sel.value = loc;
-  runSearch();
+  if (moveIn.value) moveOut.min = addDays(moveIn.value, 30);
+  enforceMinStay();
 })();
 </script>
 

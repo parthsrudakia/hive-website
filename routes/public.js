@@ -10,9 +10,125 @@ const { mintFormToken, checkFormGuards, turnstileEnabled } = require('../utils/f
 const { getGoogleReviews } = require('../utils/googleReviews');
 const { storePrivateFile } = require('../utils/storage');
 const { rewriteListingImages, proxyImage } = require('../utils/imageProxy');
+const {
+  SITE_URL,
+  absoluteUrl,
+  buildSeo,
+  organizationSchema,
+  websiteSchema,
+  breadcrumbSchema,
+  listingsSchema,
+  listingSchema,
+  faqSchema
+} = require('../utils/seo');
 
 // Cached, CDN-friendly proxy for listing photos — see utils/imageProxy.js.
 router.get('/img/:name', proxyImage);
+
+const FAQ_ITEMS = [
+  {
+    question: 'What is Hive?',
+    answer: 'Hive offers move-in ready, fully furnished apartments with flexible lease terms. Every home is professionally cleaned and set up before you arrive — just bring your suitcase.'
+  },
+  {
+    question: "What's the minimum stay?",
+    answer: 'Our minimum stay is 30 days. Beyond that, leases are month-to-month, so you can stay for a season or settle in for a year — whatever fits your plans.'
+  },
+  {
+    question: "What's included in the monthly rent?",
+    answer: 'Your rent covers everything: fully furnished apartment, WiFi, utilities (electric, gas, water), and building amenities. There are no hidden fees, broker fees, or security deposits beyond the first month.'
+  },
+  {
+    question: 'Do I need a guarantor or broker?',
+    answer: "No. There are no guarantors required and no broker fees. Apply online, and once you're approved we'll schedule your move-in date."
+  },
+  {
+    question: 'How does the move-in process work?',
+    answer: "Once you're approved, we'll schedule your move-in date. On the day, you'll receive a welcome package with keys and WiFi info. Every apartment is professionally cleaned and fully furnished."
+  },
+  {
+    question: 'Can I extend my stay?',
+    answer: "Absolutely. Our leases are month-to-month, so you can extend your stay for as long as you'd like."
+  }
+];
+
+const ROBOTS_BLOCKS = [
+  'Disallow: /admin',
+  'Disallow: /api',
+  'Disallow: /webhooks'
+];
+
+function robotsGroup(agent) {
+  return [`User-agent: ${agent}`, 'Allow: /'].concat(ROBOTS_BLOCKS).join('\n');
+}
+
+function xmlEscape(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Search and answer-engine discovery endpoints. They are deliberately mounted
+// before page middleware so crawler requests do not perform unrelated DB work.
+router.get('/robots.txt', (req, res) => {
+  const body = [
+    robotsGroup('OAI-SearchBot'),
+    robotsGroup('ChatGPT-User'),
+    robotsGroup('GPTBot'),
+    robotsGroup('*'),
+    `Sitemap: ${SITE_URL}/sitemap.xml`,
+    `Host: ${new URL(SITE_URL).host}`
+  ].join('\n\n');
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600, s-maxage=3600').send(body + '\n');
+});
+
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, COALESCE(NULLIF(btrim(location), ''), 'New York') AS location,
+              COALESCE(updated_at, created_at) AS lastmod
+         FROM listings
+        WHERE status != 'rented'
+        ORDER BY id ASC`
+    );
+    const staticPaths = ['/', '/properties', '/partners', '/faq', '/contact', '/privacy', '/terms'];
+    const cityLastmod = new Map();
+    rows.forEach(row => {
+      const value = row.lastmod ? new Date(row.lastmod).toISOString().slice(0, 10) : null;
+      if (value && (!cityLastmod.has(row.location) || value > cityLastmod.get(row.location))) {
+        cityLastmod.set(row.location, value);
+      }
+    });
+    const cities = Array.from(new Set(rows.map(row => row.location))).sort();
+    const urls = staticPaths.map(pathname => ({ loc: absoluteUrl(pathname) }))
+      .concat(cities.map(city => ({
+        loc: `${SITE_URL}/properties?location=${encodeURIComponent(city)}`,
+        lastmod: cityLastmod.get(city) || null
+      })))
+      .concat(rows.map(row => ({
+        loc: absoluteUrl(`/properties/${row.id}`),
+        lastmod: row.lastmod ? new Date(row.lastmod).toISOString().slice(0, 10) : null
+      })));
+    const body = urls.map(item =>
+      `  <url><loc>${xmlEscape(item.loc)}</loc>${item.lastmod ? `<lastmod>${item.lastmod}</lastmod>` : ''}</url>`
+    ).join('\n');
+    res.type('application/xml')
+      .set('Cache-Control', 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400')
+      .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`);
+  } catch (err) {
+    console.error('Sitemap error:', err.message);
+    res.status(503).type('text/plain').send('Sitemap temporarily unavailable');
+  }
+});
+
+router.get('/llms.txt', (req, res) => {
+  res.type('text/plain')
+    .set('Cache-Control', 'public, max-age=3600, s-maxage=3600')
+    .send(`# Hive\n\n> Hive provides move-in ready, fully furnished apartments with flexible lease terms in major U.S. cities.\n\n## Primary pages\n\n- [Homepage](${SITE_URL}/): Company overview, resident benefits, reviews, and common questions.\n- [Available furnished apartments](${SITE_URL}/properties): Search current listings by city, bedrooms, price, and stay dates.\n- [Landlord partnerships](${SITE_URL}/partners): Hive's property partnership model and process.\n- [Frequently asked questions](${SITE_URL}/faq): Lease, pricing, move-in, and extension answers.\n- [Contact Hive](${SITE_URL}/contact): General questions and support.\n- [Privacy policy](${SITE_URL}/privacy): How website and application data is handled.\n- [Terms of service](${SITE_URL}/terms): Website, listing, and application terms.\n\n## Listing discovery\n\n- [XML sitemap](${SITE_URL}/sitemap.xml): Canonical public pages and every current public listing.\n- Public listing pages intentionally show an approximate neighborhood rather than an exact street address.\n- Availability, pricing, and amenities should be confirmed with Hive because listing details can change.\n\n## Contact\n\n- Email: hello@hiveny.com\n`);
+});
 
 // ---------------------------------------------------------------------------
 // Abuse protection for public form submissions.
@@ -159,6 +275,7 @@ const FOOTER_CITIES_TTL_MS = 5 * 60 * 1000;
 router.use((req, res, next) => {
   res.locals.formToken = mintFormToken();
   res.locals.turnstileSiteKey = turnstileEnabled() ? process.env.TURNSTILE_SITE_KEY : null;
+  res.locals.seo = buildSeo(req);
   next();
 });
 
@@ -215,29 +332,87 @@ router.get('/', async (req, res) => {
     const googleReviews = await getGoogleReviews();
 
     listings.forEach(rewriteListingImages);
-    res.render('public/index', { featuredListings: listings, googleReviews });
+    const seo = buildSeo(req, {
+      pageType: 'WebPage',
+      structuredData: [
+        organizationSchema(),
+        websiteSchema(),
+        listingsSchema(listings, req.app.locals.publicTitle)
+      ]
+    });
+    res.render('public/index', { featuredListings: listings, googleReviews, seo });
   } catch (err) {
     console.error('Error loading homepage:', err);
-    res.render('public/index', { featuredListings: [], googleReviews: { reviews: [], rating: 0, totalReviews: 0 } });
+    res.render('public/index', {
+      featuredListings: [],
+      googleReviews: { reviews: [], rating: 0, totalReviews: 0 },
+      seo: buildSeo(req, { structuredData: [organizationSchema(), websiteSchema()] })
+    });
   }
 });
 
 router.get('/properties', async (req, res) => {
   try {
-    const { rows: listings } = await pool.query(
-      `SELECT * FROM listings WHERE status != 'rented'
-       ORDER BY sort_order ASC, created_at DESC`
-    );
+    const location = typeof req.query.location === 'string' ? req.query.location.trim().slice(0, 100) : '';
+    const bedrooms = ['0', '1', '2', '3'].includes(req.query.bedrooms) ? req.query.bedrooms : '';
+    const price = ['0-3000', '3000-4500', '4500-6000', '6000-999999'].includes(req.query.price) ? req.query.price : '';
+    const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+    const movein = validDate(req.query.movein);
+    const moveout = validDate(req.query.moveout);
+    const filters = { location, bedrooms, price, movein, moveout };
+
+    let query = `SELECT * FROM listings WHERE status != 'rented'`;
+    const params = [];
+    const addParam = value => { params.push(value); return `$${params.length}`; };
+    if (location) {
+      query += ` AND lower(COALESCE(NULLIF(btrim(location), ''), 'New York')) = lower(${addParam(location)})`;
+    }
+    if (bedrooms) {
+      query += bedrooms === '3'
+        ? ` AND bedrooms >= ${addParam(3)}`
+        : ` AND bedrooms = ${addParam(parseInt(bedrooms, 10))}`;
+    }
+    if (price) {
+      const [minPrice, maxPrice] = price.split('-').map(Number);
+      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly <= ${addParam(maxPrice)}`;
+    }
+    if (movein) {
+      const p = addParam(movein);
+      query += ` AND (available_from IS NULL OR available_from <= ${p}) AND (available_to IS NULL OR available_to >= ${p})`;
+    }
+    if (moveout) {
+      const p = addParam(moveout);
+      query += ` AND (available_from IS NULL OR available_from <= ${p}) AND (available_to IS NULL OR available_to >= ${p})`;
+    }
+    query += ` ORDER BY sort_order ASC, created_at DESC`;
+
+    const { rows: listings } = await pool.query(query, params);
     // Convert deprecated Drive uc?export URLs to thumbnail format
     listings.forEach(l => { if (l.images) l.images = l.images.map(url => {
       const m = url && url.match(/drive\.google\.com\/(?:uc\?export=view&id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/);
       return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w2000` : url;
     }); });
     listings.forEach(rewriteListingImages);
-    res.render('public/properties', { listings });
+    const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
+    const indexableLocation = !!(location && listings.length);
+    const locationTitle = indexableLocation ? ` in ${location}` : '';
+    const seo = buildSeo(req, {
+      title: `Furnished Apartments${locationTitle} | Hive`,
+      description: indexableLocation
+        ? `Browse furnished, move-in ready apartments in ${location} with flexible lease terms, transparent monthly pricing, and no broker fees.`
+        : undefined,
+      canonicalPath: indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties',
+      noindex: hasNarrowFilters || (!!location && !indexableLocation),
+      pageType: 'CollectionPage',
+      structuredData: [
+        breadcrumbSchema([{ name: 'Home', path: '/' }, { name: indexableLocation ? `Properties in ${location}` : 'Properties', path: indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties' }]),
+        listingsSchema(listings, req.app.locals.publicTitle)
+      ]
+    });
+    res.render('public/properties', { listings, filters, seo });
   } catch (err) {
     console.error('Error loading properties:', err);
-    res.render('public/properties', { listings: [] });
+    res.render('public/properties', { listings: [], filters: { location: '', bedrooms: '', price: '', movein: '', moveout: '' }, seo: buildSeo(req) });
   }
 });
 
@@ -245,12 +420,26 @@ router.get('/properties/:id', async (req, res) => {
   try {
     const { id } = req.params;
     if (!/^\d+$/.test(id)) {
-      return res.redirect('/properties');
+      return res.status(404).render('public/404', {
+        seo: buildSeo(req, {
+          title: 'Apartment Not Found | Hive',
+          description: 'This apartment could not be found. Browse current furnished apartments from Hive.',
+          canonicalPath: req.path,
+          noindex: true
+        })
+      });
     }
 
-    const { rows } = await pool.query('SELECT * FROM listings WHERE id = $1', [id]);
+    const { rows } = await pool.query("SELECT * FROM listings WHERE id = $1 AND status != 'rented'", [id]);
     if (rows.length === 0) {
-      return res.redirect('/properties');
+      return res.status(404).render('public/404', {
+        seo: buildSeo(req, {
+          title: 'Apartment Not Found | Hive',
+          description: 'This apartment is no longer available. Browse current furnished apartments from Hive.',
+          canonicalPath: `/properties/${id}`,
+          noindex: true
+        })
+      });
     }
 
     const listing = rows[0];
@@ -285,7 +474,26 @@ router.get('/properties/:id', async (req, res) => {
     rewriteListingImages(listing);
     relatedListings.forEach(rewriteListingImages);
 
-    res.render('public/listing-detail', { listing, relatedListings, bookings });
+    const publicName = req.app.locals.publicTitle(listing);
+    const bedroomLabel = Number(listing.bedrooms) === 0 ? 'studio' : `${listing.bedrooms}-bedroom apartment`;
+    const publicArea = [listing.neighborhood, listing.city || listing.location].filter(Boolean).join(', ');
+    const seo = buildSeo(req, {
+      title: `${publicName} | Hive`,
+      description: `Explore this furnished ${bedroomLabel} in ${publicArea || 'the city'}, from $${Number(listing.price_monthly || 0).toLocaleString('en-US')} per month. View amenities, approximate location, and availability.`,
+      canonicalPath: `/properties/${listing.id}`,
+      image: listing.images && listing.images[0],
+      imageAlt: publicName,
+      pageType: 'ItemPage',
+      structuredData: [
+        breadcrumbSchema([
+          { name: 'Home', path: '/' },
+          { name: 'Properties', path: '/properties' },
+          { name: publicName, path: `/properties/${listing.id}` }
+        ]),
+        listingSchema(listing, publicName)
+      ]
+    });
+    res.render('public/listing-detail', { listing, relatedListings, bookings, seo });
   } catch (err) {
     console.error('Error loading listing detail:', err);
     res.redirect('/properties');
@@ -293,11 +501,25 @@ router.get('/properties/:id', async (req, res) => {
 });
 
 // Keep .html routes working for backwards compatibility
-router.get('/properties.html', (req, res) => res.redirect('/properties'));
-router.get('/partners.html', (req, res) => res.redirect('/partners'));
+router.get('/properties.html', (req, res) => res.redirect(301, '/properties'));
+router.get('/partners.html', (req, res) => res.redirect(301, '/partners'));
 
 router.get('/partners', async (req, res) => {
-  res.render('public/partners');
+  const seo = buildSeo(req, {
+    pageType: 'WebPage',
+    structuredData: [
+      breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'For Landlords', path: '/partners' }]),
+      {
+        '@type': 'Service',
+        name: 'Hive Landlord Partnership',
+        serviceType: 'Furnished rental management and landlord partnership',
+        provider: { '@id': `${SITE_URL}/#organization` },
+        areaServed: 'United States',
+        audience: { '@type': 'Audience', audienceType: 'Property owners and landlords' }
+      }
+    ]
+  });
+  res.render('public/partners', { seo });
 });
 
 // Apply page
@@ -806,9 +1028,34 @@ router.post('/partners/apply', landlordLimiter, async (req, res) => {
 
 // FAQ — static page of common questions
 router.get('/faq', (req, res) => {
-  res.render('public/faq');
+  const seo = buildSeo(req, {
+    pageType: 'FAQPage',
+    structuredData: [
+      breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Frequently Asked Questions', path: '/faq' }]),
+      faqSchema(FAQ_ITEMS)
+    ]
+  });
+  res.render('public/faq', { seo });
 });
-router.get('/faqs', (req, res) => res.redirect('/faq'));
+router.get('/faqs', (req, res) => res.redirect(301, '/faq'));
+
+router.get('/privacy', (req, res) => {
+  res.render('public/legal', {
+    page: 'privacy',
+    seo: buildSeo(req, {
+      structuredData: [breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Privacy Policy', path: '/privacy' }])]
+    })
+  });
+});
+
+router.get('/terms', (req, res) => {
+  res.render('public/legal', {
+    page: 'terms',
+    seo: buildSeo(req, {
+      structuredData: [breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Terms of Service', path: '/terms' }])]
+    })
+  });
+});
 
 // Contact Us — general enquiry form (distinct from the landlord partner inquiry)
 router.get('/contact', (req, res) => {
