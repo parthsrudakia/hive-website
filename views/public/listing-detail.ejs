@@ -1628,7 +1628,7 @@ span.flatpickr-weekday {
       <div class="footer-col">
         <h4>Residences</h4>
         <% (locals.footerCities || []).forEach(function(city) { %>
-        <a href="/properties?location=<%= encodeURIComponent(city) %>"><%= city %></a>
+        <a href="<%= marketUrl(city) %>"><%= city %></a>
         <% }); %>
         <a href="/properties">All Properties</a>
       </div>

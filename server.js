@@ -6,6 +6,7 @@ const PgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const pool = require('./db/pool');
 const { safeJson, buildSeo } = require('./utils/seo');
+const { marketUrl } = require('./utils/markets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.locals.safeJson = safeJson;
+app.locals.marketUrl = marketUrl;
 
 // Private application, API, webhook, and admin responses must never become
 // search results, even if a crawler discovers one of their URLs elsewhere.

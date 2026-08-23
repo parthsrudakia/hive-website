@@ -520,7 +520,7 @@ body {
       <label for="filter-location">Location</label>
       <select id="filter-location" name="location">
         <option value="">All Locations</option>
-        <% var knownLocations = ['New York', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco', 'Washington DC', 'Boston']; %>
+        <% var knownLocations = ['New York', 'Jersey City', 'Hoboken', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco', 'Washington DC', 'Boston']; %>
         <% if (filters.location && knownLocations.indexOf(filters.location) === -1) { %>
         <option value="<%= filters.location %>" selected><%= filters.location %></option>
         <% } %>
@@ -646,7 +646,7 @@ body {
       <div class="footer-col">
         <h4>Residences</h4>
         <% (locals.footerCities || []).forEach(function(city) { %>
-        <a href="/properties?location=<%= encodeURIComponent(city) %>"><%= city %></a>
+        <a href="<%= marketUrl(city) %>"><%= city %></a>
         <% }); %>
         <a href="/properties">All Properties</a>
       </div>

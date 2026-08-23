@@ -21,6 +21,13 @@ const {
   listingSchema,
   faqSchema
 } = require('../utils/seo');
+const {
+  MARKET_PAGES,
+  MARKET_LIST,
+  marketPath,
+  marketForName,
+  marketMatchesListing
+} = require('../utils/markets');
 
 // Cached, CDN-friendly proxy for listing photos — see utils/imageProxy.js.
 router.get('/img/:name', proxyImage);
@@ -88,7 +95,7 @@ router.get('/robots.txt', (req, res) => {
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, COALESCE(NULLIF(btrim(location), ''), 'New York') AS location,
+      `SELECT id, city, COALESCE(NULLIF(btrim(location), ''), 'New York') AS location,
               COALESCE(updated_at, created_at) AS lastmod
          FROM listings
         WHERE status != 'rented'
@@ -103,8 +110,18 @@ router.get('/sitemap.xml', async (req, res) => {
       }
     });
     const cities = Array.from(new Set(rows.map(row => row.location))).sort();
+    const marketUrls = MARKET_LIST.map(market => {
+      const dates = rows
+        .filter(row => marketMatchesListing(market, row) && row.lastmod)
+        .map(row => new Date(row.lastmod).toISOString().slice(0, 10));
+      return {
+        loc: absoluteUrl(marketPath(market)),
+        lastmod: dates.length ? dates.sort().at(-1) : null
+      };
+    });
     const urls = staticPaths.map(pathname => ({ loc: absoluteUrl(pathname) }))
-      .concat(cities.map(city => ({
+      .concat(marketUrls)
+      .concat(cities.filter(city => !marketForName(city)).map(city => ({
         loc: `${SITE_URL}/properties?location=${encodeURIComponent(city)}`,
         lastmod: cityLastmod.get(city) || null
       })))
@@ -127,7 +144,7 @@ router.get('/sitemap.xml', async (req, res) => {
 router.get('/llms.txt', (req, res) => {
   res.type('text/plain')
     .set('Cache-Control', 'public, max-age=3600, s-maxage=3600')
-    .send(`# Hive\n\n> Hive provides move-in ready, fully furnished apartments with flexible lease terms in major U.S. cities.\n\n## Primary pages\n\n- [Homepage](${SITE_URL}/): Company overview, resident benefits, reviews, and common questions.\n- [Available furnished apartments](${SITE_URL}/properties): Search current listings by city, bedrooms, price, and stay dates.\n- [Landlord partnerships](${SITE_URL}/partners): Hive's property partnership model and process.\n- [Frequently asked questions](${SITE_URL}/faq): Lease, pricing, move-in, and extension answers.\n- [Contact Hive](${SITE_URL}/contact): General questions and support.\n- [Privacy policy](${SITE_URL}/privacy): How website and application data is handled.\n- [Terms of service](${SITE_URL}/terms): Website, listing, and application terms.\n\n## Listing discovery\n\n- [XML sitemap](${SITE_URL}/sitemap.xml): Canonical public pages and every current public listing.\n- Public listing pages intentionally show an approximate neighborhood rather than an exact street address.\n- Availability, pricing, and amenities should be confirmed with Hive because listing details can change.\n\n## Contact\n\n- Email: hello@hiveny.com\n`);
+    .send(`# Hive\n\n> Hive provides move-in ready, fully furnished apartments with flexible lease terms in major U.S. cities.\n\n## Primary pages\n\n- [Homepage](${SITE_URL}/): Company overview, resident benefits, reviews, and common questions.\n- [Available furnished apartments](${SITE_URL}/properties): Search current listings by city, bedrooms, price, and stay dates.\n- [New York short-term furnished rentals](${SITE_URL}${marketPath(MARKET_PAGES['new-york'])}): Furnished apartments for stays of 30 days or longer in New York.\n- [Jersey City short-term furnished rentals](${SITE_URL}${marketPath(MARKET_PAGES['jersey-city'])}): Furnished apartments for stays of 30 days or longer in Jersey City.\n- [Hoboken short-term furnished rentals](${SITE_URL}${marketPath(MARKET_PAGES.hoboken)}): Furnished apartments for stays of 30 days or longer in Hoboken.\n- [Landlord partnerships](${SITE_URL}/partners): Hive's property partnership model and process.\n- [Frequently asked questions](${SITE_URL}/faq): Lease, pricing, move-in, and extension answers.\n- [Contact Hive](${SITE_URL}/contact): General questions and support.\n- [Privacy policy](${SITE_URL}/privacy): How website and application data is handled.\n- [Terms of service](${SITE_URL}/terms): Website, listing, and application terms.\n\n## Listing discovery\n\n- [XML sitemap](${SITE_URL}/sitemap.xml): Canonical public pages and every current public listing.\n- Public listing pages intentionally show an approximate neighborhood rather than an exact street address.\n- Availability, pricing, and amenities should be confirmed with Hive because listing details can change.\n\n## Contact\n\n- Email: hello@hiveny.com\n`);
 });
 
 // ---------------------------------------------------------------------------
@@ -296,7 +313,10 @@ router.use(async (req, res, next) => {
       footerCitiesCache.fetchedAt = now; // keep last known list, retry after TTL
     }
   }
-  res.locals.footerCities = footerCitiesCache.cities;
+  const priorityMarkets = MARKET_LIST.map(market => market.name);
+  res.locals.footerCities = priorityMarkets.concat(
+    footerCitiesCache.cities.filter(city => !priorityMarkets.includes(city))
+  );
   next();
 });
 
@@ -351,6 +371,98 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/furnished-rentals/:slug', (req, res, next) => {
+  const market = MARKET_PAGES[req.params.slug];
+  if (!market) return next();
+  res.redirect(301, marketPath(market));
+});
+
+router.get('/short-term-rentals/:slug', async (req, res, next) => {
+  const market = MARKET_PAGES[req.params.slug];
+  if (!market) return next();
+
+  const bedrooms = ['0', '1', '2', '3'].includes(req.query.bedrooms) ? req.query.bedrooms : '';
+  const price = ['0-3000', '3000-4500', '4500-6000', '6000-999999'].includes(req.query.price) ? req.query.price : '';
+  const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+  const movein = validDate(req.query.movein);
+  const moveout = validDate(req.query.moveout);
+  const filters = { bedrooms, price, movein, moveout };
+  const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
+
+  try {
+    const matchNames = market.matchNames.map(value => value.toLowerCase());
+    const params = [matchNames];
+    const addParam = value => { params.push(value); return `$${params.length}`; };
+    let query = `SELECT * FROM listings
+      WHERE status != 'rented'
+        AND (
+          lower(COALESCE(NULLIF(btrim(location), ''), 'New York')) = ANY($1::text[])
+          OR lower(COALESCE(city, '')) = ANY($1::text[])
+        )`;
+    if (bedrooms) {
+      query += bedrooms === '3'
+        ? ` AND bedrooms >= ${addParam(3)}`
+        : ` AND bedrooms = ${addParam(parseInt(bedrooms, 10))}`;
+    }
+    if (price) {
+      const [minPrice, maxPrice] = price.split('-').map(Number);
+      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly <= ${addParam(maxPrice)}`;
+    }
+    if (movein) {
+      const p = addParam(movein);
+      query += ` AND (available_from IS NULL OR available_from <= ${p}) AND (available_to IS NULL OR available_to >= ${p})`;
+    }
+    if (moveout) {
+      const p = addParam(moveout);
+      query += ` AND (available_from IS NULL OR available_from <= ${p}) AND (available_to IS NULL OR available_to >= ${p})`;
+    }
+    query += ` ORDER BY sort_order ASC, created_at DESC`;
+
+    const { rows: listings } = await pool.query(query, params);
+    listings.forEach(rewriteListingImages);
+    const canonicalPath = marketPath(market);
+    const seo = buildSeo(req, {
+      title: market.title,
+      description: market.description,
+      canonicalPath,
+      noindex: hasNarrowFilters,
+      pageType: 'CollectionPage',
+      structuredData: [
+        organizationSchema(),
+        breadcrumbSchema([
+          { name: 'Home', path: '/' },
+          { name: 'Properties', path: '/properties' },
+          { name: `${market.name} furnished rentals`, path: canonicalPath }
+        ]),
+        {
+          '@type': 'City',
+          '@id': `${absoluteUrl(canonicalPath)}#city`,
+          name: market.name,
+          containedInPlace: { '@type': 'State', name: market.state }
+        },
+        listingsSchema(listings, req.app.locals.publicTitle),
+        faqSchema(market.faqs)
+      ]
+    });
+    res.render('public/market', { market, markets: MARKET_LIST, listings, filters, seo, loadError: false });
+  } catch (err) {
+    console.error(`Error loading ${market.name} market page:`, err);
+    res.status(503).render('public/market', {
+      market,
+      markets: MARKET_LIST,
+      listings: [],
+      filters,
+      loadError: true,
+      seo: buildSeo(req, {
+        title: market.title,
+        description: market.description,
+        canonicalPath: marketPath(market),
+        noindex: true
+      })
+    });
+  }
+});
+
 router.get('/properties', async (req, res) => {
   try {
     const location = typeof req.query.location === 'string' ? req.query.location.trim().slice(0, 100) : '';
@@ -360,6 +472,11 @@ router.get('/properties', async (req, res) => {
     const movein = validDate(req.query.movein);
     const moveout = validDate(req.query.moveout);
     const filters = { location, bedrooms, price, movein, moveout };
+    const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
+    const recognizedMarket = marketForName(location);
+    if (recognizedMarket && !hasNarrowFilters) {
+      return res.redirect(301, marketPath(recognizedMarket));
+    }
 
     let query = `SELECT * FROM listings WHERE status != 'rented'`;
     const params = [];
@@ -393,7 +510,6 @@ router.get('/properties', async (req, res) => {
       return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w2000` : url;
     }); });
     listings.forEach(rewriteListingImages);
-    const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
     const indexableLocation = !!(location && listings.length);
     const locationTitle = indexableLocation ? ` in ${location}` : '';
     const seo = buildSeo(req, {
@@ -401,11 +517,13 @@ router.get('/properties', async (req, res) => {
       description: indexableLocation
         ? `Browse furnished, move-in ready apartments in ${location} with flexible lease terms, transparent monthly pricing, and no broker fees.`
         : undefined,
-      canonicalPath: indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties',
+      canonicalPath: recognizedMarket
+        ? marketPath(recognizedMarket)
+        : (indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties'),
       noindex: hasNarrowFilters || (!!location && !indexableLocation),
       pageType: 'CollectionPage',
       structuredData: [
-        breadcrumbSchema([{ name: 'Home', path: '/' }, { name: indexableLocation ? `Properties in ${location}` : 'Properties', path: indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties' }]),
+        breadcrumbSchema([{ name: 'Home', path: '/' }, { name: indexableLocation ? `Properties in ${location}` : 'Properties', path: recognizedMarket ? marketPath(recognizedMarket) : (indexableLocation ? `/properties?location=${encodeURIComponent(location)}` : '/properties') }]),
         listingsSchema(listings, req.app.locals.publicTitle)
       ]
     });

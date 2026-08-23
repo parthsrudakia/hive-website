@@ -124,7 +124,7 @@ function organizationSchema() {
     },
     description: DEFAULT_DESCRIPTION,
     email: 'hello@hiveny.com',
-    areaServed: ['New York', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco', 'Washington DC', 'Boston'].map(name => ({
+    areaServed: ['New York', 'Jersey City', 'Hoboken', 'Los Angeles', 'Chicago', 'Miami', 'San Francisco', 'Washington DC', 'Boston'].map(name => ({
       '@type': 'City',
       name
     })),

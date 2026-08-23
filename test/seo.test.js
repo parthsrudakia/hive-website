@@ -49,11 +49,16 @@ const fakePool = {
   async query(sql, params = []) {
     calls.push({ sql, params });
     if (/SELECT DISTINCT COALESCE/.test(sql)) return { rows: [{ city: 'New York' }] };
-    if (/SELECT id, COALESCE/.test(sql)) {
-      return { rows: [{ id: listing.id, location: listing.location, lastmod: listing.updated_at }] };
+    if (/SELECT id, city, COALESCE/.test(sql)) {
+      return { rows: [{ id: listing.id, city: listing.city, location: listing.location, lastmod: listing.updated_at }] };
     }
     if (/SELECT \* FROM listings WHERE id =/.test(sql)) return { rows: [listing] };
     if (/FROM bookings/.test(sql) || /AND \(neighborhood =/.test(sql)) return { rows: [] };
+    if (/ANY\(\$1::text\[\]\)/.test(sql)) {
+      const requested = params[0][0];
+      const city = requested === 'new york' ? 'New York' : requested.replace(/\b\w/g, letter => letter.toUpperCase());
+      return { rows: [{ ...listing, city, location: city, state: city === 'New York' ? 'NY' : 'NJ' }] };
+    }
     if (/SELECT \* FROM listings WHERE status != 'rented'/.test(sql)) {
       return { rows: params.includes('Atlantis') ? [] : [listing] };
     }
@@ -120,7 +125,9 @@ test('builds an absolute sitemap with city and listing URLs', async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /application\/xml/);
   assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/properties<\/loc>/);
-  assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/properties\?location=New%20York<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/short-term-rentals\/new-york<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/short-term-rentals\/jersey-city<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/short-term-rentals\/hoboken<\/loc>/);
   assert.match(xml, /<loc>https:\/\/www\.hiveny\.com\/properties\/7<\/loc>/);
   assert.match(xml, /<lastmod>2026-08-20<\/lastmod>/);
 });
@@ -130,7 +137,7 @@ test('renders URL-driven filters with canonical metadata', async () => {
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /<title>Furnished Apartments in New York \| Hive<\/title>/);
-  assert.match(html, /<link rel="canonical" href="https:\/\/www\.hiveny\.com\/properties\?location=New%20York">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.hiveny\.com\/short-term-rentals\/new-york">/);
   assert.match(html, /<meta name="robots" content="noindex, nofollow, noarchive">/);
   assert.match(html, /name="location"/);
   assert.match(html, /value="New York" selected/);
@@ -157,6 +164,33 @@ test('publishes unique listing metadata and Apartment JSON-LD', async () => {
   assert.match(html, /"@type":"Apartment"/);
   assert.match(html, /"unitText":"MONTH"/);
   assert.match(html, /<meta property="og:image" content="https:\/\/www\.hiveny\.com\/images\/hero-1\.jpg">/);
+});
+
+test('publishes one useful, canonical landing page per target rental market', async () => {
+  const markets = [
+    ['/short-term-rentals/new-york', 'Short-Term Furnished Rentals in New York'],
+    ['/short-term-rentals/jersey-city', 'Short-Term Furnished Rentals in Jersey City'],
+    ['/short-term-rentals/hoboken', 'Short-Term Furnished Rentals in Hoboken']
+  ];
+  for (const [pathname, heading] of markets) {
+    const response = await fetch(`${baseUrl}${pathname}`);
+    const html = await response.text();
+    assert.equal(response.status, 200, pathname);
+    assert.match(html, new RegExp(`<h1>${heading}<\\/h1>`));
+    assert.match(html, new RegExp(`<link rel="canonical" href="https:\\/\\/www\\.hiveny\\.com${pathname}">`));
+    assert.match(html, /"@type":"CollectionPage"/);
+    assert.match(html, /"@type":"FAQPage"/);
+    assert.match(html, /30-day minimum/);
+    assert.equal((html.match(/<h1>/g) || []).length, 1);
+  }
+
+  const legacy = await fetch(`${baseUrl}/properties?location=New%20York`, { redirect: 'manual' });
+  assert.equal(legacy.status, 301);
+  assert.equal(legacy.headers.get('location'), '/short-term-rentals/new-york');
+
+  const alias = await fetch(`${baseUrl}/furnished-rentals/hoboken`, { redirect: 'manual' });
+  assert.equal(alias.status, 301);
+  assert.equal(alias.headers.get('location'), '/short-term-rentals/hoboken');
 });
 
 test('publishes FAQ and legal pages as indexable, structured content', async () => {
@@ -187,7 +221,7 @@ test('returns a noindex 404 and excludes admin responses from search', async () 
 });
 
 test('renders shared metadata on every primary public page', async () => {
-  const pages = ['/', '/properties', '/partners', '/faq', '/contact', '/privacy', '/terms', '/apply', '/partners/apply', '/apply-now'];
+  const pages = ['/', '/properties', '/short-term-rentals/new-york', '/short-term-rentals/jersey-city', '/short-term-rentals/hoboken', '/partners', '/faq', '/contact', '/privacy', '/terms', '/apply', '/partners/apply', '/apply-now'];
   for (const pathname of pages) {
     const response = await fetch(`${baseUrl}${pathname}`);
     const html = await response.text();
