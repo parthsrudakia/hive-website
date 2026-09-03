@@ -129,6 +129,9 @@ app.use(session({
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_verified_at TIMESTAMP`,
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_last_error TEXT`,
       `CREATE INDEX IF NOT EXISTS tenant_applications_identity_idx ON tenant_applications (identity_session_id)`,
+      // Which listing an /apply inquiry came from (via the listing page's "Book Now"),
+      // so the admin Applications tab can link straight to the property.
+      `ALTER TABLE applications ADD COLUMN IF NOT EXISTS listing_id INTEGER`,
       // Forgot-password flow: a hashed single-use reset token + expiry.
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR(64)`,
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`

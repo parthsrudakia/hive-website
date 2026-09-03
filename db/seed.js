@@ -12,7 +12,7 @@ async function seed() {
       INSERT INTO admin_users (email, password_hash, name)
       VALUES ($1, $2, $3)
       ON CONFLICT (email) DO NOTHING
-    `, ['admin@hiveny.com', passwordHash, 'Hive Admin']);
+    `, ['vineet.dutta@hiveny.com', passwordHash, 'Hive Admin']);
 
     // Seed existing listings from hardcoded data
     const listings = [
@@ -173,7 +173,7 @@ async function seed() {
 
     console.log('Seed data inserted successfully.');
     if (adminCreated) {
-      console.log(`Admin login: admin@hiveny.com / ${seedPassword}`);
+      console.log(`Admin login: vineet.dutta@hiveny.com / ${seedPassword}`);
       if (!process.env.ADMIN_SEED_PASSWORD) {
         console.log('(Password was randomly generated — save it now, or change it after first login.)');
       }

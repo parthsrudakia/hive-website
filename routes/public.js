@@ -697,10 +697,11 @@ router.post('/apply', applyLimiter, async (req, res) => {
     }
 
     // Save to database, including any booking context from a listing's "Book Now" button
+    const listingId = /^\d+$/.test(String(req.body.listing_id || '')) ? parseInt(req.body.listing_id, 10) : null;
     await pool.query(
-      `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [full_name, email, phone || null, about, social_media, property || null, move_in || null, move_out || null]
+      `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out, listing_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [full_name, email, phone || null, about, social_media, property || null, move_in || null, move_out || null, listingId]
     );
 
     // Optional booking context carried over from a listing's "Book Now" button.

@@ -520,6 +520,25 @@ router.get('/applications', requireAdmin, async (req, res) => {
     const { rows: applications } = await pool.query(
       'SELECT * FROM applications ORDER BY created_at DESC'
     );
+    // Resolve each application to a listing so the property is clickable.
+    // New rows carry listing_id; older rows only have the public title text,
+    // so fall back to matching that against the current listings.
+    const { rows: listings } = await pool.query(
+      'SELECT id, title, city, neighborhood, bedrooms, property_type FROM listings'
+    );
+    const byId = new Map(listings.map(l => [l.id, l]));
+    const byTitle = new Map();
+    for (const l of listings) {
+      const t = req.app.locals.publicTitle(l);
+      if (!byTitle.has(t)) byTitle.set(t, l);
+    }
+    for (const app of applications) {
+      const match = (app.listing_id && byId.get(app.listing_id))
+        || (app.property && byTitle.get(app.property.trim()))
+        || null;
+      app.listing_url = match ? `/properties/${match.id}` : null;
+      app.listing_title = match ? match.title : null;
+    }
     res.render('admin/applications', {
       applications,
       adminName: req.session.adminName
