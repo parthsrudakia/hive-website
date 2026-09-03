@@ -558,13 +558,25 @@ router.post('/applications/clear-all', requireAdmin, async (req, res) => {
   res.redirect('/admin/applications');
 });
 
+// Row deletes are sent by a small fetch() script in the admin tables so the
+// page doesn't reload; plain form posts (JS off) still get the redirect.
+function isFetchDelete(req) {
+  return req.get('X-Requested-With') === 'fetch';
+}
+function finishDelete(req, res, redirectTo, err) {
+  if (isFetchDelete(req)) {
+    return err ? res.status(500).json({ ok: false }) : res.json({ ok: true });
+  }
+  return res.redirect(redirectTo);
+}
+
 router.post('/applications/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM applications WHERE id = $1', [req.params.id]);
-    res.redirect('/admin/applications');
+    finishDelete(req, res, '/admin/applications');
   } catch (err) {
     console.error('Delete application error:', err);
-    res.redirect('/admin/applications');
+    finishDelete(req, res, '/admin/applications', err);
   }
 });
 
@@ -605,10 +617,10 @@ router.get('/paid-applications/:id/id/:side', requireAdmin, async (req, res) => 
 router.post('/paid-applications/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query(`DELETE FROM tenant_applications WHERE id = $1`, [req.params.id]);
-    res.redirect('/admin/paid-applications');
+    finishDelete(req, res, '/admin/paid-applications');
   } catch (err) {
     console.error('Delete paid application error:', err);
-    res.redirect('/admin/paid-applications');
+    finishDelete(req, res, '/admin/paid-applications', err);
   }
 });
 
@@ -640,10 +652,10 @@ router.post('/landlord-inquiries/clear-all', requireAdmin, async (req, res) => {
 router.post('/landlord-inquiries/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM landlord_inquiries WHERE id = $1', [req.params.id]);
-    res.redirect('/admin/landlord-inquiries');
+    finishDelete(req, res, '/admin/landlord-inquiries');
   } catch (err) {
     console.error('Delete landlord inquiry error:', err);
-    res.redirect('/admin/landlord-inquiries');
+    finishDelete(req, res, '/admin/landlord-inquiries', err);
   }
 });
 
@@ -669,10 +681,10 @@ router.get('/bookings', requireAdmin, async (req, res) => {
 router.post('/bookings/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM bookings WHERE id = $1', [req.params.id]);
-    res.redirect('/admin/bookings');
+    finishDelete(req, res, '/admin/bookings');
   } catch (err) {
     console.error('Delete booking error:', err);
-    res.redirect('/admin/bookings');
+    finishDelete(req, res, '/admin/bookings', err);
   }
 });
 

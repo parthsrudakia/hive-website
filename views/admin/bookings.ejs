@@ -147,5 +147,27 @@
       </div>
     <% } %>
   </main>
+  <script>
+    // Delete a row in place instead of reloading the page. Falls back to the
+    // normal form post if the request fails.
+    document.addEventListener('submit', function (e) {
+      var form = e.target.closest && e.target.closest('.delete-form');
+      if (!form || e.defaultPrevented) return;
+      e.preventDefault();
+      var btn = form.querySelector('button');
+      var row = form.closest('tr');
+      if (btn) btn.disabled = true;
+      fetch(form.action, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); })
+        .then(function () {
+          var tbody = row && row.parentNode;
+          if (row) row.remove();
+          var count = document.querySelector('.admin-header .count');
+          if (count && tbody) count.textContent = '(' + tbody.querySelectorAll('tr').length + ')';
+          if (tbody && !tbody.querySelector('tr')) window.location.reload();
+        })
+        .catch(function () { if (btn) btn.disabled = false; form.submit(); });
+    });
+  </script>
 </body>
 </html>
