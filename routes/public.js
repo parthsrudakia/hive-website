@@ -5,6 +5,7 @@ const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const pool = require('../db/pool');
+const { parseSocialLink } = require('../utils/socialLink');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { mintFormToken, checkFormGuards, turnstileEnabled } = require('../utils/formGuard');
 const { getGoogleReviews } = require('../utils/googleReviews');
@@ -259,7 +260,6 @@ const isName = (s) => /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'-]{1,99}$/.test(s);
 const isPhone = (s) => /^[0-9()+\-. ]{7,20}$/.test(s) && (s.match(/\d/g) || []).length >= 7;
 const isText = (s, min, max) => typeof s === 'string' && s.trim().length >= min && s.trim().length <= max;
 // A URL or a social handle (e.g. https://linkedin.com/in/x, instagram.com/x, @handle)
-const isUrlish = (s) => /^(https?:\/\/)?([\w-]+\.)+[A-Za-z]{2,}(\/\S*)?$/.test(s) || /^@?[\w.]{2,50}$/.test(s);
 const isUnits = (s) => /^[0-9]{1,6} ?\+?$/.test(s);
 const isSsnLast4 = (s) => /^[0-9]{4}$/.test(s);
 // Applicant must be an adult with a plausible birth year.
@@ -656,6 +656,8 @@ router.get('/apply', (req, res) => {
 router.post('/apply', applyLimiter, async (req, res) => {
   try {
     const { full_name, email, phone, about, social_media, property, move_in, move_out } = req.body;
+    // Only official Instagram / LinkedIn profile links are accepted; stored normalized.
+    const social = parseSocialLink(social_media);
 
     const guard = await checkFormGuards(req);
     if (guard.verdict === 'spam') {
@@ -681,7 +683,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
       [isEmail(email || ''), 'Please enter a valid email address.'],
       [isPhone(phone || ''), 'Please enter a valid phone number (at least 7 digits).'],
       [isText(about || '', 10, 2000), 'Please tell us a bit about yourself (10–2000 characters).'],
-      [isUrlish((social_media || '').trim()), 'Please enter a valid social media / LinkedIn link or handle.']
+      [!!social, 'Please share a link to your Instagram or LinkedIn profile (e.g. instagram.com/yourname or linkedin.com/in/yourname).']
     ]);
     if (error) {
       return res.status(400).render('public/apply', {
@@ -701,7 +703,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
     await pool.query(
       `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out, listing_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [full_name, email, phone || null, about, social_media, property || null, move_in || null, move_out || null, listingId]
+      [full_name, email, phone || null, about, social.url, property || null, move_in || null, move_out || null, listingId]
     );
 
     // Optional booking context carried over from a listing's "Book Now" button.
@@ -724,7 +726,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
           <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${email}</td></tr>
           <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Phone</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${phone || 'Not provided'}</td></tr>
           <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">About</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${about}</td></tr>
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Social / LinkedIn</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${social_media}</td></tr>
+          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">${social.label}</td><td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="${social.url}">${social.url}</a></td></tr>
         </table>
         <p style="margin-top: 20px; color: #888; font-size: 12px;">Submitted via Hive Application Form</p>
       `

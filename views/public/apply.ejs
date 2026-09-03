@@ -494,8 +494,8 @@ body {
           <textarea name="about" placeholder="What brings you to Hive? Tell us about your living situation, what you're looking for, and when you're hoping to move in." required minlength="10" maxlength="2000"></textarea>
         </div>
         <div class="form-group">
-          <label>Please share your social media / LinkedIn <span class="required">*</span></label>
-          <input type="text" name="social_media" placeholder="https://linkedin.com/in/yourname" required minlength="3" maxlength="300" title="A link (e.g. linkedin.com/in/yourname) or a handle">
+          <label>Please share your Instagram or LinkedIn profile link <span class="required">*</span></label>
+          <input type="text" name="social_media" placeholder="https://linkedin.com/in/yourname or https://instagram.com/yourname" required minlength="3" maxlength="300" pattern="(https?://)?([A-Za-z0-9-]+\.)*([Ii]nstagram|[Ll]inked[Ii]n)\.com/.+" title="A link to your Instagram or LinkedIn profile, e.g. instagram.com/yourname or linkedin.com/in/yourname">
         </div>
         <% if (locals.turnstileSiteKey) { %>
         <div class="cf-turnstile" data-sitekey="<%= turnstileSiteKey %>" style="margin-bottom: 16px;"></div>

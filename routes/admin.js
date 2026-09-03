@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const pool = require('../db/pool');
+const { parseSocialLink } = require('../utils/socialLink');
 const { requireAdmin } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
 const { sendMail, NOTIFY_EMAIL } = require('../utils/mailer');
@@ -538,6 +539,8 @@ router.get('/applications', requireAdmin, async (req, res) => {
         || null;
       app.listing_url = match ? `/properties/${match.id}` : null;
       app.listing_title = match ? match.title : null;
+      // Older rows may hold non-Instagram/LinkedIn links; those render as-is.
+      app.social = parseSocialLink(app.social_media);
     }
     res.render('admin/applications', {
       applications,
