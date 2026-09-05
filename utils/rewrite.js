@@ -3,7 +3,7 @@
 // ANTHROPIC_API_KEY (or a local `ant auth login` profile in development).
 const Anthropic = require('@anthropic-ai/sdk');
 
-const MODEL = process.env.REWRITE_MODEL || 'claude-opus-5';
+const MODEL = process.env.REWRITE_MODEL || 'claude-sonnet-5';
 
 let client = null;
 function getClient() {
@@ -37,11 +37,9 @@ async function rewriteReply({ message, applicantName, property }) {
   if (applicantName) context.push(`Applicant's name: ${applicantName}`);
   if (property) context.push(`Property they asked about: ${property}`);
 
-  const response = await getClient().beta.messages.create({
+  const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
     system: SYSTEM,
     messages: [{
       role: 'user',
