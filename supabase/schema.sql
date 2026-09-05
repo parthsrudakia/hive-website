@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS landlord_inquiries (
   property_type     VARCHAR(50),
   message           TEXT,
   referral_source   VARCHAR(200),
+  -- First time the admin marked it seen in the panel (NULL = shown as "New")
+  opened_at         TIMESTAMP,
   created_at        TIMESTAMP DEFAULT NOW()
 );
 

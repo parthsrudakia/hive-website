@@ -60,13 +60,17 @@
   </div>
 
   <main class="admin-content">
+    <% const newCount = inquiries.filter(i => !i.opened_at).length; %>
     <div class="admin-header">
-      <h2>Landlord Inquiries <span class="count">(<%= inquiries.length %>)</span></h2>
-      <% if (inquiries.length > 0) { %>
-      <form action="/admin/landlord-inquiries/clear-all" method="POST" onsubmit="return confirm('Delete ALL <%= inquiries.length %> landlord inquiries? This cannot be undone.')">
-        <button type="submit" class="btn-delete btn-clear-all">Clear All</button>
-      </form>
-      <% } %>
+      <h2>Landlord Inquiries <span class="count">(<%= inquiries.length %><% if (newCount > 0) { %> · <span class="new-count"><%= newCount %> new</span><% } %>)</span></h2>
+      <div class="admin-header-actions">
+        <button type="button" class="btn-seen-all" id="seen-all" <%= newCount > 0 ? '' : 'hidden' %>>Mark all as seen</button>
+        <% if (inquiries.length > 0) { %>
+        <form action="/admin/landlord-inquiries/clear-all" method="POST" onsubmit="return confirm('Delete ALL <%= inquiries.length %> landlord inquiries? This cannot be undone.')">
+          <button type="submit" class="btn-delete btn-clear-all">Clear All</button>
+        </form>
+        <% } %>
+      </div>
     </div>
 
     <% if (inquiries.length === 0) { %>
@@ -91,8 +95,11 @@
           </thead>
           <tbody>
             <% inquiries.forEach(function(inq) { %>
-            <tr>
-              <td class="inq-name"><%= inq.full_name %></td>
+            <tr data-row-id="<%= inq.id %>" class="<%= !inq.opened_at ? 'is-unopened' : '' %>"<% if (!inq.opened_at) { %> title="Click to mark as seen"<% } %>>
+              <td class="inq-name">
+                <div><%= inq.full_name %></div>
+                <span class="new-badge"><% if (!inq.opened_at) { %>New<% } %></span>
+              </td>
               <td>
                 <div><%= inq.email %></div>
                 <% if (inq.phone) { %><div class="inq-email"><%= inq.phone %></div><% } %>
@@ -117,6 +124,7 @@
       </div>
     <% } %>
   </main>
+  <%- include('../partials/mark-seen', { basePath: '/admin/landlord-inquiries', nameClass: '.inq-name' }) %>
   <script>
     // Delete a row in place instead of reloading the page. Falls back to the
     // normal form post if the request fails.

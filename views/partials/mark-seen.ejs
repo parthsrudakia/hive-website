@@ -1,0 +1,61 @@
+<%#
+  "New" rows for tabs without a detail popup: clicking anywhere on an unopened
+  row (outside links/buttons) marks it seen; the header can mark all seen.
+  Locals: basePath (e.g. '/admin/paid-applications'), nameClass (e.g. '.app-name').
+%>
+<style>
+  tr.is-unopened <%= nameClass %> { font-weight: 700; }
+  tr.is-unopened { cursor: pointer; }
+  tr.is-unopened td { color: var(--ink); }
+  .new-badge { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--white); background: var(--ink); border-radius: 999px; white-space: nowrap; }
+  .new-badge:empty { display: none; }
+  .admin-header .count .new-count { color: var(--ink); font-weight: 600; }
+  .admin-header-actions { display: flex; align-items: center; gap: 12px; }
+  .btn-seen-all { padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--white); border: 1px solid #d8d4cc; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+  .btn-seen-all:hover { background: #f3f0ea; }
+  .btn-seen-all[hidden] { display: none; }
+</style>
+<script>
+  (function () {
+    var base = <%- JSON.stringify(basePath) %>;
+    function refreshCount() {
+      var count = document.querySelector('.admin-header .count');
+      var seenAll = document.getElementById('seen-all');
+      var remaining = document.querySelectorAll('tr.is-unopened').length;
+      var total = document.querySelectorAll('tr[data-row-id]').length;
+      if (count) count.innerHTML = '(' + total + (remaining ? ' · <span class="new-count">' + remaining + ' new</span>' : '') + ')';
+      if (seenAll) seenAll.hidden = remaining === 0;
+    }
+    function markSeenRow(row) {
+      row.classList.remove('is-unopened');
+      row.removeAttribute('title');
+      var badge = row.querySelector('.new-badge');
+      if (badge) badge.textContent = '';
+    }
+    document.addEventListener('click', function (e) {
+      var row = e.target.closest && e.target.closest('tr.is-unopened');
+      if (!row) return;
+      if (e.target.closest('a, button, form, input, select, textarea')) return;
+      var id = row.getAttribute('data-row-id');
+      markSeenRow(row);
+      refreshCount();
+      fetch(base + '/' + id + '/seen', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } }).catch(function () {});
+    });
+    var seenAllBtn = document.getElementById('seen-all');
+    if (seenAllBtn) {
+      seenAllBtn.addEventListener('click', function () {
+        seenAllBtn.disabled = true;
+        fetch(base + '/seen-all', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); })
+          .then(function () {
+            document.querySelectorAll('tr.is-unopened').forEach(markSeenRow);
+            refreshCount();
+          })
+          .catch(function () { window.location.reload(); })
+          .finally(function () { seenAllBtn.disabled = false; });
+      });
+    }
+    // Keep the in-place delete script's count in sync with the "new" suffix.
+    document.addEventListener('submit', function () { setTimeout(refreshCount, 400); });
+  })();
+</script>

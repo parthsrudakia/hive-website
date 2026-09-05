@@ -151,6 +151,21 @@ app.use(session({
            UPDATE applications SET opened_at = created_at;
          END IF;
        END $$`,
+      // Same "New until seen" marker for the paid-applications and landlord-inquiry tabs.
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name = 'tenant_applications' AND column_name = 'opened_at') THEN
+           ALTER TABLE tenant_applications ADD COLUMN opened_at TIMESTAMP;
+           UPDATE tenant_applications SET opened_at = created_at;
+         END IF;
+       END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name = 'landlord_inquiries' AND column_name = 'opened_at') THEN
+           ALTER TABLE landlord_inquiries ADD COLUMN opened_at TIMESTAMP;
+           UPDATE landlord_inquiries SET opened_at = created_at;
+         END IF;
+       END $$`,
       `CREATE TABLE IF NOT EXISTS application_messages (
         id SERIAL PRIMARY KEY,
         application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,

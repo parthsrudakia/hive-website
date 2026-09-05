@@ -801,6 +801,26 @@ router.get('/paid-applications', requireAdmin, async (req, res) => {
   }
 });
 
+// "New" marker: clicking a row, or "Mark all as seen", sets opened_at.
+router.post('/paid-applications/seen-all', requireAdmin, async (req, res) => {
+  try {
+    await pool.query(`UPDATE tenant_applications SET opened_at = NOW() WHERE opened_at IS NULL AND payment_status = 'paid'`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark paid applications seen error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+router.post('/paid-applications/:id/seen', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE tenant_applications SET opened_at = NOW() WHERE id = $1 AND opened_at IS NULL', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark paid application seen error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 // Stream a fresh, short-lived signed URL for an applicant's photo ID. The browser
 // follows the redirect to view it; the raw private path never reaches the client.
 router.get('/paid-applications/:id/id/:side', requireAdmin, async (req, res) => {
@@ -843,6 +863,25 @@ router.get('/landlord-inquiries', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Landlord inquiries error:', err);
     res.render('admin/landlord-inquiries', { inquiries: [], adminName: req.session.adminName });
+  }
+});
+
+router.post('/landlord-inquiries/seen-all', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE landlord_inquiries SET opened_at = NOW() WHERE opened_at IS NULL');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark inquiries seen error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+router.post('/landlord-inquiries/:id/seen', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE landlord_inquiries SET opened_at = NOW() WHERE id = $1 AND opened_at IS NULL', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark inquiry seen error:', err);
+    res.status(500).json({ ok: false });
   }
 });
 

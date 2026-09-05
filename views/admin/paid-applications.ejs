@@ -78,8 +78,12 @@
   </div>
 
   <main class="admin-content">
+    <% const newCount = applications.filter(a => !a.opened_at).length; %>
     <div class="admin-header">
-      <h2>Paid Applications <span class="count">(<%= applications.length %>)</span></h2>
+      <h2>Paid Applications <span class="count">(<%= applications.length %><% if (newCount > 0) { %> · <span class="new-count"><%= newCount %> new</span><% } %>)</span></h2>
+      <div class="admin-header-actions">
+        <button type="button" class="btn-seen-all" id="seen-all" <%= newCount > 0 ? '' : 'hidden' %>>Mark all as seen</button>
+      </div>
     </div>
 
     <% if (applications.length === 0) { %>
@@ -109,9 +113,10 @@
                  var backPdf = (a.id_back_path || '').toLowerCase().endsWith('.pdf');
                  var name = app.full_name || ((a.first_name || '') + ' ' + (a.last_name || '')).trim();
             %>
-            <tr>
+            <tr data-row-id="<%= app.id %>" class="<%= !app.opened_at ? 'is-unopened' : '' %>"<% if (!app.opened_at) { %> title="Click to mark as seen"<% } %>>
               <td>
                 <div class="app-name"><%= name %></div>
+                <span class="new-badge"><% if (!app.opened_at) { %>New<% } %></span>
                 <% if (a.birthdate) { %><div class="sub">DOB: <%= a.birthdate %></div><% } %>
                 <% if (a.ssn_last4) { %><div class="sub">SSN: ***-**-<%= a.ssn_last4 %></div><% } %>
               </td>
@@ -164,6 +169,7 @@
       </div>
     <% } %>
   </main>
+  <%- include('../partials/mark-seen', { basePath: '/admin/paid-applications', nameClass: '.app-name' }) %>
 
   <!-- ID viewer modal -->
   <div class="id-overlay" id="id-overlay">
