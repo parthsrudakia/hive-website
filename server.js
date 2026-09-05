@@ -138,6 +138,9 @@ app.use(session({
       // Admin <-> applicant email thread. `reply_token` makes the per-application
       // inbound address (app-<id>-<token>@REPLY_DOMAIN) unguessable.
       `ALTER TABLE applications ADD COLUMN IF NOT EXISTS reply_token VARCHAR(32)`,
+      // Soft delete: Delete / Clear All hide rows; a late applicant reply restores
+      // them; rows hidden for over a year are purged when the tab is opened.
+      `ALTER TABLE applications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
       `CREATE TABLE IF NOT EXISTS application_messages (
         id SERIAL PRIMARY KEY,
         application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,

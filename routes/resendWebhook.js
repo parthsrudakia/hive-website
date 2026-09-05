@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const pool = require('../db/pool');
-const { parseReplyAddress } = require('../utils/mailer');
+const { sendMail, parseReplyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const { verifySvixSignature, stripQuotedReply, htmlToText } = require('../utils/resendWebhook');
 
 // Resend "email.received" webhook: applicant replies to messages the admin
@@ -13,7 +13,11 @@ const { verifySvixSignature, stripQuotedReply, htmlToText } = require('../utils/
 // email. We match the address to an application, fetch the body from the
 // Receiving API (the webhook only carries metadata), keep the new text, and
 // store it as an unread inbound message so the panel can show a badge. No
-// email is sent for replies; the admin panel badge is the notification.
+// email is sent for matched replies; the admin panel badge is the notification.
+//
+// If the application was soft-deleted (Delete / Clear All) the reply restores
+// it. If it no longer exists at all (purged after a year, or the address is
+// wrong) the reply is forwarded to NOTIFY_EMAIL so it is never lost.
 //
 // IMPORTANT: mounted in server.js BEFORE express.json() — signature
 // verification needs the raw, unparsed request body.
@@ -24,6 +28,43 @@ function tokensMatch(a, b) {
   const ba = Buffer.from(String(a || ''));
   const bb = Buffer.from(String(b || ''));
   return ba.length === bb.length && ba.length > 0 && crypto.timingSafeEqual(ba, bb);
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Body isn't in the webhook; pull it from the Receiving API. Returns '' on failure.
+async function fetchReceivedText(emailId) {
+  try {
+    const full = await fetchReceivedEmail(emailId);
+    return full.text || htmlToText(full.html);
+  } catch (err) {
+    console.error(`[resend-webhook] Could not fetch body for ${emailId}:`, err.message);
+    return '';
+  }
+}
+
+function cleanReplyText(raw) {
+  let text = stripQuotedReply(raw) || String(raw || '').trim() || '(empty message)';
+  if (text.length > MAX_BODY_CHARS) text = text.slice(0, MAX_BODY_CHARS) + '…';
+  return text;
+}
+
+// A reply we could not attach to an application: hand it to the inbox instead.
+async function forwardOrphanReply(data, reason) {
+  const text = cleanReplyText(await fetchReceivedText(data.email_id));
+  await sendMail({
+    to: NOTIFY_EMAIL,
+    replyTo: data.from,
+    subject: `Fwd: ${data.subject || '(no subject)'} — reply to a deleted application`,
+    html: `
+      <h2>Applicant reply with no matching application</h2>
+      <p style="line-height:1.6;color:#444;">From <strong>${escapeHtml(data.from)}</strong>. ${escapeHtml(reason)}</p>
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #d4920b;background:#f8f6f2;white-space:pre-wrap;line-height:1.6;color:#1a1a18;">${escapeHtml(text)}</blockquote>
+      <p style="margin-top:20px;color:#888;font-size:12px;">Reply to this email to answer them directly; it will not appear in the admin panel.</p>`
+  });
+  console.log(`[resend-webhook] Forwarded orphan reply ${data.email_id} from ${data.from} to ${NOTIFY_EMAIL} (${reason})`);
 }
 
 async function fetchReceivedEmail(emailId) {
@@ -68,31 +109,30 @@ router.post('/resend', express.raw({ type: '*/*', limit: '1mb' }), async (req, r
       return res.json({ received: true, ignored: true });
     }
 
+    // Webhook redelivery: already stored, skip the API fetch.
+    const dup = await pool.query('SELECT 1 FROM application_messages WHERE resend_id = $1', [data.email_id]);
+    if (dup.rows.length) return res.json({ received: true, duplicate: true });
+
     const { rows } = await pool.query(
-      'SELECT id, full_name, email, reply_token FROM applications WHERE id = $1',
+      'SELECT id, full_name, email, reply_token, deleted_at FROM applications WHERE id = $1',
       [parsed.id]
     );
     const app = rows[0];
     if (!app || !tokensMatch(app.reply_token, parsed.token)) {
-      console.warn(`[resend-webhook] Ignoring email ${data.email_id}: application #${parsed.id} not found or token mismatch`);
-      return res.json({ received: true, ignored: true });
+      const reason = app
+        ? `The address did not match application #${parsed.id}.`
+        : `Application #${parsed.id} no longer exists (deleted over a year ago).`;
+      await forwardOrphanReply(data, reason);
+      return res.json({ received: true, forwarded: true });
     }
 
-    // Webhook redelivery: already stored, skip the API fetch and the notification.
-    const dup = await pool.query('SELECT 1 FROM application_messages WHERE resend_id = $1', [data.email_id]);
-    if (dup.rows.length) return res.json({ received: true, duplicate: true });
+    const text = cleanReplyText(await fetchReceivedText(data.email_id));
 
-    // Body isn't in the webhook; pull it from the Receiving API.
-    let text = '';
-    try {
-      const full = await fetchReceivedEmail(data.email_id);
-      text = full.text || htmlToText(full.html);
-    } catch (err) {
-      console.error(`[resend-webhook] Could not fetch body for ${data.email_id}:`, err.message);
-      text = '';
+    // A reply to a hidden (Delete / Clear All) application brings it back.
+    if (app.deleted_at) {
+      await pool.query('UPDATE applications SET deleted_at = NULL WHERE id = $1', [app.id]);
+      console.log(`[resend-webhook] Restored deleted application #${app.id} because the applicant replied`);
     }
-    text = stripQuotedReply(text) || text.trim() || '(empty message)';
-    if (text.length > MAX_BODY_CHARS) text = text.slice(0, MAX_BODY_CHARS) + '…';
 
     const insert = await pool.query(
       `INSERT INTO application_messages (application_id, direction, subject, body_text, from_email, message_id, resend_id)

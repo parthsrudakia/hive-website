@@ -530,10 +530,24 @@ const APPLICATIONS_SQL = `
         FROM application_messages
        GROUP BY application_id
     ) m ON m.application_id = a.id
+   WHERE a.deleted_at IS NULL
    ORDER BY (COALESCE(m.unread, 0) > 0) DESC, m.last_in_at DESC NULLS LAST, a.created_at DESC`;
+
+// Delete / Clear All only hide rows (soft delete) so a late applicant reply can
+// still find and restore its application. Rows hidden for over a year are
+// permanently removed (messages cascade) whenever the tab is opened; there is
+// no long-running process on Vercel to schedule this elsewhere.
+const PURGE_AFTER = '1 year';
+async function purgeOldDeletedApplications() {
+  const { rowCount } = await pool.query(
+    `DELETE FROM applications WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '${PURGE_AFTER}'`
+  );
+  if (rowCount) console.log(`[applications] Purged ${rowCount} application(s) deleted over ${PURGE_AFTER} ago`);
+}
 
 router.get('/applications', requireAdmin, async (req, res) => {
   try {
+    await purgeOldDeletedApplications().catch(err => console.error('Purge applications error:', err));
     const { rows: applications } = await pool.query(APPLICATIONS_SQL);
     // Resolve each application to a listing so the property is clickable.
     // New rows carry listing_id; older rows only have the public title text,
@@ -741,7 +755,7 @@ router.post('/applications/:id/reply', requireAdmin, replyLimiter, async (req, r
 
 router.post('/applications/clear-all', requireAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM applications');
+    await pool.query('UPDATE applications SET deleted_at = NOW() WHERE deleted_at IS NULL');
   } catch (err) {
     console.error('Clear applications error:', err);
   }
@@ -762,7 +776,7 @@ function finishDelete(req, res, redirectTo, err) {
 
 router.post('/applications/:id/delete', requireAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM applications WHERE id = $1', [req.params.id]);
+    await pool.query('UPDATE applications SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
     finishDelete(req, res, '/admin/applications');
   } catch (err) {
     console.error('Delete application error:', err);

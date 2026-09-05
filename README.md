@@ -207,6 +207,8 @@ One-time setup for inbound replies:
 2. **Namecheap → Advanced DNS** → add the MX record Resend shows, on host `reply`.
 3. **Resend → Webhooks → Add endpoint** `https://www.hiveny.com/webhooks/resend`, event `email.received`. Copy the signing secret into `RESEND_WEBHOOK_SECRET` on Vercel.
 
+**Delete / Clear All are soft deletes.** Rows are hidden, not removed. If the applicant replies within a year the application reappears with a "new reply" badge; rows hidden for over a year are permanently purged (with their messages) the next time the Applications tab is opened. A reply that cannot be matched to any application (purged, or a bad address) is forwarded to `NOTIFY_EMAIL` instead of being dropped.
+
 Until this is set up, replies still send fine; applicant answers just won't appear in the panel.
 
 ---

@@ -153,6 +153,7 @@ Good places to find developers:
 | **Mark a unit as rented** | Edit listing → change status to "Rented" |
 | **Change notification email** | Update the `NOTIFY_EMAIL` environment variable on the hosting dashboard |
 | **Reply to an applicant** | Admin panel → Applications → click **more** on the row → type in the reply box → Send reply |
+| **Delete applications** | Delete / Clear All hide them. If the person replies within a year the application comes back; after a year it is permanently deleted. Replies to permanently deleted applications are forwarded to the notification email |
 | **Update site copy/text** | A developer edits the template files in `views/public/` |
 | **Change colors or styling** | A developer edits the CSS in the template files |
 | **Add a new page** | A developer creates a new template and route |
