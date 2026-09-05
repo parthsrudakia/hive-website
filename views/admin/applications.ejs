@@ -95,6 +95,14 @@
     .btn-send { padding: 9px 20px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--white); background: var(--ink); border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
     .btn-send:hover { background: var(--accent-dark); }
     .btn-send:disabled { opacity: 0.6; cursor: default; }
+    .app-reply-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-rewrite { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--accent-dark); background: #fdf5e4; border: 1px solid #ead9a8; border-radius: 6px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+    .btn-rewrite:hover { background: #f8e9c4; border-color: var(--accent); }
+    .btn-rewrite:disabled { opacity: 0.6; cursor: default; }
+    .btn-rewrite svg { width: 14px; height: 14px; }
+    .btn-undo { padding: 0; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .btn-undo:hover { color: var(--ink); }
+    .app-reply-box.is-busy { opacity: 0.6; }
   </style>
 </head>
 <body>
@@ -211,7 +219,14 @@
         <textarea class="app-reply-box" id="app-reply-box" name="message" maxlength="5000" placeholder="Write a reply to the applicant…" required></textarea>
         <div class="app-reply-row">
           <span class="app-reply-status" id="app-reply-status"><span class="app-reply-hint">Sent by email. The applicant's reply will appear here.</span></span>
-          <button type="submit" class="btn-send" id="app-send">Send reply</button>
+          <div class="app-reply-actions">
+            <button type="button" class="btn-undo" id="app-undo" hidden>Undo rewrite</button>
+            <button type="button" class="btn-rewrite" id="app-rewrite" title="Polish the draft with AI. The result replaces the text in the box.">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+              Rewrite with AI
+            </button>
+            <button type="submit" class="btn-send" id="app-send">Send reply</button>
+          </div>
         </div>
       </form>
     </div>
@@ -317,6 +332,8 @@
         document.body.style.overflow = '';
         currentId = null;
         box.value = '';
+        originalDraft = null;
+        undoBtn.hidden = true;
         setStatus('');
       }
 
@@ -329,6 +346,45 @@
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) closeApp(); });
       box.addEventListener('keydown', function (e) {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); }
+      });
+
+      // Rewrite with AI: send the draft to the server, put the polished text back
+      // in the box, and keep the original one click away.
+      var rewriteBtn = document.getElementById('app-rewrite');
+      var undoBtn = document.getElementById('app-undo');
+      var originalDraft = null;
+      rewriteBtn.addEventListener('click', function () {
+        if (!currentId) return;
+        var draft = box.value.trim();
+        if (!draft) { setStatus('Write a draft first, then rewrite it.', 'error'); box.focus(); return; }
+        rewriteBtn.disabled = true; sendBtn.disabled = true; box.classList.add('is-busy'); box.readOnly = true;
+        setStatus('Rewriting…');
+        fetch('/admin/applications/' + currentId + '/rewrite', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+          body: JSON.stringify({ message: draft })
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.data.ok) throw new Error(res.data.error || 'Rewrite failed.');
+            originalDraft = box.value;
+            box.value = res.data.text;
+            undoBtn.hidden = false;
+            setStatus('Rewritten. Review it, then send.', 'ok');
+          })
+          .catch(function (err) { setStatus(err.message, 'error'); })
+          .finally(function () {
+            rewriteBtn.disabled = false; sendBtn.disabled = false; box.classList.remove('is-busy'); box.readOnly = false; box.focus();
+          });
+      });
+      undoBtn.addEventListener('click', function () {
+        if (originalDraft == null) return;
+        box.value = originalDraft;
+        originalDraft = null;
+        undoBtn.hidden = true;
+        setStatus('');
+        box.focus();
       });
 
       form.addEventListener('submit', function (e) {
@@ -352,6 +408,8 @@
             threadEl.insertAdjacentHTML('beforeend', messageHtml(res.data.message));
             threadEl.lastElementChild.scrollIntoView({ block: 'nearest' });
             box.value = '';
+            originalDraft = null;
+            undoBtn.hidden = true;
             setStatus('Reply sent.', 'ok');
           })
           .catch(function (err) { setStatus(err.message, 'error'); })

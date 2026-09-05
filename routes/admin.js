@@ -11,6 +11,8 @@ const { requireAdmin } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
 const { sendMail, replyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
+const { rewriteReply, rewriteEnabled } = require('../utils/rewrite');
+const Anthropic = require('@anthropic-ai/sdk');
 
 // --- Multer config for image uploads ---
 // Files are kept in memory, then handed to storeImage() which writes them to
@@ -617,6 +619,44 @@ const replyLimiter = rateLimit({
   legacyHeaders: false,
   store: new PgRateLimitStore({ prefix: 'admin-reply', windowMs: 15 * 60 * 1000 }),
   handler: (req, res) => res.status(429).json({ ok: false, error: 'Too many replies sent. Please wait a few minutes and try again.' })
+});
+
+// "Rewrite with AI" in the reply popup: polishes the draft in the textarea.
+const rewriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'admin-rewrite', windowMs: 15 * 60 * 1000 }),
+  handler: (req, res) => res.status(429).json({ ok: false, error: 'Too many rewrites. Please wait a few minutes and try again.' })
+});
+
+router.post('/applications/:id/rewrite', requireAdmin, rewriteLimiter, async (req, res) => {
+  const message = String((req.body && req.body.message) || '').replace(/\r\n?/g, '\n').trim();
+  if (!message) return res.status(400).json({ ok: false, error: 'Write a draft first, then rewrite it.' });
+  if (message.length > 5000) return res.status(400).json({ ok: false, error: 'Message is too long (max 5000 characters).' });
+  if (!rewriteEnabled()) return res.status(503).json({ ok: false, error: 'AI rewrite is not configured (ANTHROPIC_API_KEY missing).' });
+
+  try {
+    const { rows } = await pool.query('SELECT full_name, property FROM applications WHERE id = $1', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ ok: false, error: 'Application not found' });
+    const text = await rewriteReply({ message, applicantName: rows[0].full_name, property: rows[0].property });
+    res.json({ ok: true, text });
+  } catch (err) {
+    if (err instanceof Anthropic.AuthenticationError) {
+      console.error('[rewrite] Anthropic auth failed:', err.message);
+      return res.status(503).json({ ok: false, error: 'AI rewrite is not configured correctly (invalid API key).' });
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      return res.status(429).json({ ok: false, error: 'The AI service is busy. Please try again in a moment.' });
+    }
+    if (err instanceof Anthropic.APIError) {
+      console.error('[rewrite] Anthropic API error:', err.status, err.message);
+      return res.status(502).json({ ok: false, error: 'The AI service returned an error. Please try again.' });
+    }
+    console.error('[rewrite] Error:', err);
+    res.status(500).json({ ok: false, error: err.message || 'Rewrite failed. Please try again.' });
+  }
 });
 
 router.post('/applications/:id/reply', requireAdmin, replyLimiter, async (req, res) => {

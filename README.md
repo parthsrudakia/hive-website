@@ -70,6 +70,7 @@ See `.env.example` for the full list. Key variables:
 | `RESEND_API_KEY` | Yes | Resend API key for all outbound mail |
 | `MAIL_FROM` / `NOTIFY_EMAIL` | No | Sender identity and the inbox that receives landlord-inquiry, contact, and paid-application notifications (default `parth.rudakia@hiveny.com`) |
 | `REPLY_DOMAIN` / `RESEND_WEBHOOK_SECRET` | No | Inbound applicant replies into the admin panel (see below) |
+| `ANTHROPIC_API_KEY` | No | Enables the "Rewrite with AI" button in the admin reply popup (Claude, via the Anthropic SDK) |
 | `GOOGLE_API_KEY` | No | Google Drive API key for bulk image imports |
 | `GOOGLE_PLACES_API_KEY` | No | Google Places API for reviews widget |
 | `GOOGLE_PLACE_ID` | No | Google Maps Place ID for reviews |
@@ -199,7 +200,7 @@ Tenant applications (`/apply`) and applicant replies do **not** email the inbox;
 
 ### Replying to applicants from the admin panel
 
-On **Admin → Applications**, clicking **more** on a row opens the full application with a reply box. Replies are emailed to the applicant with `Reply-To: app-<id>-<token>@REPLY_DOMAIN`. When the applicant answers, Resend receives the email on that subdomain and calls `/webhooks/resend`; the reply is stored in `application_messages`, and the row gets a **"new reply"** badge and moves to the top of the list. No email is sent for replies; the badge is the notification. Opening the popup clears the badge.
+On **Admin → Applications**, clicking **more** on a row opens the full application with a reply box. **Rewrite with AI** polishes the draft in the box (Claude via `ANTHROPIC_API_KEY`; the original is one click away with **Undo rewrite**). Replies are emailed to the applicant with `Reply-To: app-<id>-<token>@REPLY_DOMAIN`. When the applicant answers, Resend receives the email on that subdomain and calls `/webhooks/resend`; the reply is stored in `application_messages`, and the row gets a **"new reply"** badge and moves to the top of the list. No email is sent for replies; the badge is the notification. Opening the popup clears the badge.
 
 One-time setup for inbound replies:
 1. **Resend → Domains → Add domain** `reply.hiveny.com` (receiving). `hiveny.com` itself keeps its Microsoft 365 MX record, so a subdomain is required.
