@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS applications (
   reply_token  VARCHAR(32),
   -- Soft delete (Delete / Clear All). Restored if the applicant replies; purged after a year.
   deleted_at   TIMESTAMP,
+  -- First time the admin opened it in the panel (NULL = shown as "New")
+  opened_at    TIMESTAMP,
   created_at   TIMESTAMP DEFAULT NOW()
 );
 

@@ -141,6 +141,16 @@ app.use(session({
       // Soft delete: Delete / Clear All hide rows; a late applicant reply restores
       // them; rows hidden for over a year are purged when the tab is opened.
       `ALTER TABLE applications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      // When the admin first opened the application popup (NULL = never opened,
+      // shown as "New"). Backfilled once, when the column is first added, so
+      // rows from before this shipped count as already opened.
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name = 'applications' AND column_name = 'opened_at') THEN
+           ALTER TABLE applications ADD COLUMN opened_at TIMESTAMP;
+           UPDATE applications SET opened_at = created_at;
+         END IF;
+       END $$`,
       `CREATE TABLE IF NOT EXISTS application_messages (
         id SERIAL PRIMARY KEY,
         application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,

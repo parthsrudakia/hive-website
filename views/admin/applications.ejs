@@ -32,7 +32,13 @@
     .data-table tbody tr:last-child td { border-bottom: none; }
     .data-table tbody tr:hover { background: #faf9f6; }
 
-    .app-name { font-weight: 600; }
+    .app-name { font-weight: 500; }
+    /* Never opened in the panel: bold name + "New" pill, like unread mail. */
+    tr.is-unopened .app-name { font-weight: 700; }
+    tr.is-unopened td { color: var(--ink); }
+    .new-badge { display: inline-block; margin-top: 4px; margin-right: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--white); background: var(--ink); border-radius: 999px; white-space: nowrap; }
+    .new-badge:empty { display: none; }
+    .admin-header .count .new-count { color: var(--ink); font-weight: 600; }
     .app-email { color: var(--muted); font-size: 13px; }
     .app-about { max-width: 320px; font-size: 13px; line-height: 1.5; color: #555; }
     /* Collapsed by default: two lines, uniform row height. Full text lives in the popup. */
@@ -118,7 +124,8 @@
 
   <main class="admin-content">
     <div class="admin-header">
-      <h2>Applications <span class="count">(<%= applications.length %>)</span></h2>
+      <% const newCount = applications.filter(a => !a.opened_at).length; %>
+      <h2>Applications <span class="count">(<%= applications.length %><% if (newCount > 0) { %> · <span class="new-count"><%= newCount %> new</span><% } %>)</span></h2>
       <% if (applications.length > 0) { %>
       <form action="/admin/applications/clear-all" method="POST" onsubmit="return confirm('Clear all <%= applications.length %> applications from this list? If an applicant replies within a year, their application comes back here. After a year they are permanently deleted.')">
         <button type="submit" class="btn-delete btn-clear-all">Clear All</button>
@@ -148,10 +155,10 @@
           </thead>
           <tbody>
             <% applications.forEach(function(app) { %>
-            <tr data-app-id="<%= app.id %>" class="<%= app.unread_count > 0 ? 'has-unread' : '' %>">
+            <tr data-app-id="<%= app.id %>" class="<%= app.unread_count > 0 ? 'has-unread' : '' %><%= !app.opened_at ? ' is-unopened' : '' %>">
               <td class="app-name">
                 <div><%= app.full_name %></div>
-                <span class="reply-badge"><% if (app.unread_count > 0) { %><%= app.unread_count %> new <%= app.unread_count === 1 ? 'reply' : 'replies' %><% } %></span>
+                <span class="new-badge"><% if (!app.opened_at) { %>New<% } %></span><span class="reply-badge"><% if (app.unread_count > 0) { %><%= app.unread_count %> new <%= app.unread_count === 1 ? 'reply' : 'replies' %><% } %></span>
               </td>
               <td>
                 <div><%= app.email %></div>
@@ -284,6 +291,20 @@
         var badge = row.querySelector('.reply-badge');
         if (badge) badge.textContent = '';
       }
+      // Opening the popup marks the application as opened: drop the "New" pill in place.
+      function markOpened(id) {
+        var row = document.querySelector('tr[data-app-id="' + id + '"]');
+        if (!row || !row.classList.contains('is-unopened')) return;
+        row.classList.remove('is-unopened');
+        var badge = row.querySelector('.new-badge');
+        if (badge) badge.textContent = '';
+        var count = document.querySelector('.admin-header .count');
+        if (count) {
+          var remaining = document.querySelectorAll('tr.is-unopened').length;
+          var total = document.querySelectorAll('tr[data-app-id]').length;
+          count.innerHTML = '(' + total + (remaining ? ' · <span class="new-count">' + remaining + ' new</span>' : '') + ')';
+        }
+      }
 
       function openApp(id) {
         currentId = id;
@@ -315,6 +336,7 @@
             metaEl.innerHTML = bits.join('<br>');
             aboutEl.textContent = a.about || '';
             renderThread(data.messages);
+            markOpened(id);
             if (hadUnread) {
               fetch('/admin/applications/' + id + '/messages/read', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
                 .then(function () { clearBadge(id); })

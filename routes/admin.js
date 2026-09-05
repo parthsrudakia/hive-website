@@ -602,6 +602,8 @@ router.get('/applications/:id/messages', requireAdmin, async (req, res) => {
       `SELECT ${MESSAGE_COLS} FROM application_messages WHERE application_id = $1 ORDER BY created_at ASC, id ASC`,
       [req.params.id]
     );
+    // Opening the popup is what turns a "New" application into an opened one.
+    await pool.query('UPDATE applications SET opened_at = NOW() WHERE id = $1 AND opened_at IS NULL', [req.params.id]);
     res.json({ ok: true, application: rows[0], messages });
   } catch (err) {
     console.error('Application messages error:', err);
