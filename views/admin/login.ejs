@@ -43,29 +43,14 @@
       box-shadow: 0 2px 12px rgba(26, 26, 24, 0.06);
     }
 
-    .login-brand {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .login-brand h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 32px;
-      font-weight: 600;
-      color: var(--ink);
-      letter-spacing: 1px;
-    }
-
-    .login-brand span {
-      display: block;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-top: 4px;
-    }
+    .login-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 28px; }
+    /* Same lockup as hiveny.com's nav (light variant), scaled up like the public header. */
+    .hive-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; transform: scale(1.25); transform-origin: center; margin: 6px 0; }
+    .hive-logo svg { flex-shrink: 0; }
+    .hive-logo .logo-text { display: flex; flex-direction: column; line-height: 1; }
+    .hive-logo .logo-name { font-family: 'DM Sans', -apple-system, sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); }
+    .hive-logo .logo-tag { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.48rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 6px; color: var(--ink); opacity: 0.5; }
+    .login-brand span.login-title { display: block; font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.14em; }
 
     .error-message {
       background: #fef2f2;
@@ -150,8 +135,8 @@
 <body>
   <div class="login-card">
     <div class="login-brand">
-      <h1>Hive</h1>
-      <span>Admin Panel</span>
+      <%- include('../partials/hive-logo', { variant: 'light', href: '/' }) %>
+      <span class="login-title">Admin Panel</span>
     </div>
 
     <% if (error) { %>

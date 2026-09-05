@@ -19,19 +19,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'DM Sans', sans-serif; background-color: var(--cream); color: var(--ink); min-height: 100vh; }
 
-    .admin-nav { background: var(--ink); color: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; }
-    .admin-nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--white); text-decoration: none; letter-spacing: 1px; }
-    .admin-nav-brand span { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-left: 10px; }
-    .admin-nav-right { display: flex; align-items: center; gap: 20px; font-size: 14px; }
-    .admin-nav-right .admin-greeting { color: #b0ada6; }
-    .admin-nav-right a { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; }
-    .admin-nav-right a:hover { color: var(--accent-dark); }
-
-    .admin-tabs { display: flex; gap: 0; background: var(--white); border-bottom: 1px solid #e0ddd7; padding: 0 32px; }
-    .admin-tab { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
-    .admin-tab:hover { color: var(--ink); }
-    .admin-tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
-
     .admin-content { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
     .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .admin-header h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; }
@@ -65,14 +52,7 @@
   </style>
 </head>
 <body>
-  <nav class="admin-nav">
-    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
-    <div class="admin-nav-right">
-      <span class="admin-greeting">Hello, <%= adminName %></span>
-      <a href="/admin/account">Change Password</a>
-      <a href="/admin/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('../partials/admin-nav', { hideAccountLink: false }) %>
 
   <div class="admin-tabs">
     <a href="/admin/dashboard" class="admin-tab">Listings</a>

@@ -1,0 +1,9 @@
+<%#
+  Hive logo lockup, identical to the public site's nav/footer brand.
+  Locals: variant ('dark' for dark backgrounds, 'light' for light backgrounds), href (default '/').
+%>
+<% const v = (typeof variant !== 'undefined' && variant) || 'light'; const iconFill = v === 'dark' ? '#e8a82e' : '#d4920b'; %>
+<a href="<%= (typeof href !== 'undefined' && href) || '/' %>" class="hive-logo hive-logo--<%= v %>">
+  <svg width="24" height="30" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="40" cy="8" r="4.5" fill="<%= iconFill %>"/><rect x="28" y="18" width="24" height="6" rx="3" fill="<%= iconFill %>"/><rect x="18" y="32" width="44" height="6" rx="3" fill="<%= iconFill %>"/><rect x="15" y="46" width="50" height="6" rx="3" fill="<%= iconFill %>"/><rect x="18" y="60" width="44" height="6" rx="3" fill="<%= iconFill %>"/><rect x="28" y="74" width="24" height="6" rx="3" fill="<%= iconFill %>"/><circle cx="40" cy="88" r="4" fill="<%= iconFill %>"/></svg>
+  <span class="logo-text"><span class="logo-name">Hive</span><span class="logo-tag">City Living, Made Simple</span></span>
+</a>

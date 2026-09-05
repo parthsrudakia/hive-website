@@ -1,0 +1,43 @@
+<%#
+  Admin header: the public site's logo lockup + nav-link typography, on the ink bar.
+  Locals: adminName; hideAccountLink (optional, true on the account page).
+%>
+<style>
+  .admin-nav { background: var(--ink, #1a1a18); color: #fefdfb; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 64px; border-top: 3px solid #e8a82e; }
+  .admin-nav-brand { display: flex; align-items: center; gap: 14px; }
+  /* Same lockup as hiveny.com's nav: DM Sans, uppercase, wide tracking. */
+  .hive-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .hive-logo svg { flex-shrink: 0; }
+  .hive-logo .logo-text { display: flex; flex-direction: column; line-height: 1; }
+  .hive-logo .logo-name { font-family: 'DM Sans', -apple-system, sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.14em; text-transform: uppercase; color: #1a1a18; }
+  .hive-logo .logo-tag { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.48rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 6px; color: #1a1a18; opacity: 0.5; }
+  .hive-logo--dark .logo-name, .hive-logo--dark .logo-tag { color: #fefdfb; }
+  .admin-nav-badge { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #e8a82e; border: 1px solid rgba(232,168,46,0.5); border-radius: 999px; padding: 4px 10px; line-height: 1; }
+  .admin-nav-right { display: flex; align-items: center; gap: 24px; }
+  .admin-nav-right .admin-greeting { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.82rem; font-weight: 400; letter-spacing: 0.02em; color: rgba(255,255,255,0.6); }
+  .admin-nav-right a { font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.85); text-decoration: none; transition: color 0.3s; }
+  .admin-nav-right a:hover { color: #e8a82e; }
+  /* Tabs use the same nav-link typography as the public header. */
+  .admin-tabs { display: flex; gap: 0; background: #fefdfb; border-bottom: 1px solid #e0ddd7; padding: 0 32px; }
+  .admin-tab { padding: 16px 22px; font-family: 'DM Sans', -apple-system, sans-serif; font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8378; text-decoration: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .admin-tab:hover { color: #1a1a18; }
+  .admin-tab.active { color: #1a1a18; font-weight: 600; border-bottom-color: #d4920b; }
+  @media (max-width: 720px) {
+    .admin-nav { padding: 0 20px; }
+    .admin-nav-right { gap: 16px; }
+    .admin-nav-right .admin-greeting { display: none; }
+    .admin-tabs { padding: 0 8px; overflow-x: auto; }
+    .admin-tab { padding: 14px 12px; white-space: nowrap; }
+  }
+</style>
+<nav class="admin-nav">
+  <div class="admin-nav-brand">
+    <%- include('hive-logo', { variant: 'dark', href: '/admin/dashboard' }) %>
+    <span class="admin-nav-badge">Admin</span>
+  </div>
+  <div class="admin-nav-right">
+    <span class="admin-greeting">Hello, <%= adminName %></span>
+    <% if (!(typeof hideAccountLink !== 'undefined' && hideAccountLink)) { %><a href="/admin/account">Change Password</a><% } %>
+    <a href="/admin/logout">Logout</a>
+  </div>
+</nav>

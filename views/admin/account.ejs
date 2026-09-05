@@ -30,48 +30,6 @@
       min-height: 100vh;
     }
 
-    /* --- Nav Bar --- */
-    .admin-nav {
-      background: var(--ink);
-      color: var(--white);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 32px;
-      height: 56px;
-    }
-    .admin-nav-brand {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 22px;
-      font-weight: 600;
-      color: var(--white);
-      text-decoration: none;
-      letter-spacing: 1px;
-    }
-    .admin-nav-brand span {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-left: 10px;
-    }
-    .admin-nav-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      font-size: 14px;
-    }
-    .admin-nav-right .admin-greeting { color: #b0ada6; }
-    .admin-nav-right a {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .admin-nav-right a:hover { color: var(--accent-dark); }
-
     /* --- Card --- */
     .account-wrap {
       max-width: 480px;
@@ -174,13 +132,7 @@
 </head>
 <body>
   <!-- Nav Bar -->
-  <nav class="admin-nav">
-    <a href="/admin/dashboard" class="admin-nav-brand">Hive <span>Admin</span></a>
-    <div class="admin-nav-right">
-      <span class="admin-greeting">Hello, <%= adminName %></span>
-      <a href="/admin/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('../partials/admin-nav', { hideAccountLink: true }) %>
 
   <div class="account-wrap">
     <a href="/admin/dashboard" class="back-link">&larr; Back to dashboard</a>
