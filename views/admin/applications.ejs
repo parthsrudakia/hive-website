@@ -48,12 +48,10 @@
     .app-name { font-weight: 600; }
     .app-email { color: var(--muted); font-size: 13px; }
     .app-about { max-width: 320px; font-size: 13px; line-height: 1.5; color: #555; }
-    /* Collapsed by default: two lines, uniform row height. "more" expands in place. */
+    /* Collapsed by default: two lines, uniform row height. Full text lives in the popup. */
     .app-about-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-    .app-about.is-open .app-about-text { display: block; -webkit-line-clamp: unset; overflow: visible; }
-    /* Toggle keeps its slot (visibility, not display) so every collapsed row is the same height. */
-    .app-about-toggle { display: block; visibility: hidden; margin-top: 2px; padding: 0; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1.4; color: var(--accent-dark); background: none; border: none; cursor: pointer; }
-    .app-about.has-more .app-about-toggle { visibility: visible; }
+    /* "more" opens the detail/reply popup. */
+    .app-about-toggle { display: block; margin-top: 2px; padding: 0; font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1.4; color: var(--accent-dark); background: none; border: none; cursor: pointer; }
     .app-about-toggle:hover { text-decoration: underline; }
     .app-social a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .app-social-link { display: inline-block !important; font-weight: 500; text-decoration: underline !important; text-decoration-color: rgba(0,0,0,0.25) !important; text-underline-offset: 2px; }
@@ -72,6 +70,44 @@
     .btn-delete:hover { background: #fecaca; }
     .btn-clear-all { padding: 8px 18px; font-size: 13px; border: 1px solid #fecaca; }
     .delete-form { display: inline; margin: 0; padding: 0; }
+
+    /* Unread applicant reply: honey edge + badge; these rows are sorted first. */
+    .data-table tbody tr.has-unread td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+    .data-table tbody tr.has-unread { background: #fdf8ec; }
+    .reply-badge { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--white); background: var(--accent); border-radius: 999px; white-space: nowrap; }
+    .reply-badge:empty { display: none; }
+
+    /* Application detail + reply popup */
+    .app-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(26,26,24,0.7); align-items: center; justify-content: center; padding: 24px; }
+    .app-overlay.open { display: flex; }
+    .app-modal { background: var(--white); border-radius: 10px; width: 100%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.4); }
+    .app-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #e0ddd7; }
+    .app-modal-head h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; line-height: 1.2; }
+    .app-modal-meta { margin-top: 4px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .app-modal-meta a { color: var(--accent-dark); }
+    .app-close { background: none; border: none; cursor: pointer; font-size: 26px; line-height: 1; color: var(--muted); padding: 0 2px; }
+    .app-close:hover { color: var(--ink); }
+    .app-modal-body { flex: 1; overflow: auto; padding: 18px 20px; background: #faf9f6; }
+    .app-section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 6px; }
+    .app-modal-about { font-size: 14px; line-height: 1.6; color: #333; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--white); border: 1px solid #e8e5df; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+    .app-thread { display: flex; flex-direction: column; gap: 10px; }
+    .app-thread-empty { font-size: 13px; color: var(--muted); padding: 6px 2px; }
+    .msg { max-width: 82%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg-in { align-self: flex-start; background: var(--white); border: 1px solid #e8e5df; border-bottom-left-radius: 4px; }
+    .msg-out { align-self: flex-end; background: #f3e7c9; border: 1px solid #ead9a8; border-bottom-right-radius: 4px; }
+    .msg-meta { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.2px; }
+    .msg-in.is-new { border-color: var(--accent); }
+    .app-modal-foot { border-top: 1px solid #e0ddd7; padding: 14px 20px; background: var(--white); }
+    .app-reply-box { width: 100%; min-height: 96px; resize: vertical; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.5; padding: 10px 12px; border: 1px solid #d8d4cc; border-radius: 8px; background: var(--white); color: var(--ink); }
+    .app-reply-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,146,11,0.15); }
+    .app-reply-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+    .app-reply-hint { font-size: 12px; color: var(--muted); }
+    .app-reply-status { font-size: 13px; color: var(--muted); }
+    .app-reply-status.is-error { color: #b91c1c; }
+    .app-reply-status.is-ok { color: #15803d; }
+    .btn-send { padding: 9px 20px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--white); background: var(--ink); border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+    .btn-send:hover { background: var(--accent-dark); }
+    .btn-send:disabled { opacity: 0.6; cursor: default; }
   </style>
 </head>
 <body>
@@ -124,8 +160,11 @@
           </thead>
           <tbody>
             <% applications.forEach(function(app) { %>
-            <tr>
-              <td class="app-name"><%= app.full_name %></td>
+            <tr data-app-id="<%= app.id %>" class="<%= app.unread_count > 0 ? 'has-unread' : '' %>">
+              <td class="app-name">
+                <div><%= app.full_name %></div>
+                <span class="reply-badge"><% if (app.unread_count > 0) { %><%= app.unread_count %> new <%= app.unread_count === 1 ? 'reply' : 'replies' %><% } %></span>
+              </td>
               <td>
                 <div><%= app.email %></div>
                 <% if (app.phone) { %><div class="app-email"><%= app.phone %></div><% } %>
@@ -147,7 +186,7 @@
               </td>
               <td class="app-about">
                 <div class="app-about-text"><%= app.about %></div>
-                <button type="button" class="app-about-toggle" aria-expanded="false">more</button>
+                <button type="button" class="app-about-toggle" data-open-app="<%= app.id %>">more</button>
               </td>
               <td class="app-social">
                 <% if (app.social) { %>
@@ -169,24 +208,182 @@
           </tbody>
         </table>
       </div>
-      <script>
-        // Show the "more" toggle only where the About text is actually clipped.
-        (function () {
-          document.querySelectorAll('.app-about').forEach(function (cell) {
-            var text = cell.querySelector('.app-about-text');
-            var btn = cell.querySelector('.app-about-toggle');
-            if (!text || !btn) return;
-            if (text.scrollHeight > text.clientHeight + 1) cell.classList.add('has-more');
-            btn.addEventListener('click', function () {
-              var open = cell.classList.toggle('is-open');
-              btn.textContent = open ? 'less' : 'more';
-              btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            });
-          });
-        })();
-      </script>
     <% } %>
   </main>
+
+  <!-- Application detail + reply popup -->
+  <div class="app-overlay" id="app-overlay" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+    <div class="app-modal">
+      <div class="app-modal-head">
+        <div>
+          <h3 id="app-modal-title">Application</h3>
+          <div class="app-modal-meta" id="app-modal-meta"></div>
+        </div>
+        <button type="button" class="app-close" id="app-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="app-modal-body">
+        <div class="app-section-label">About</div>
+        <div class="app-modal-about" id="app-modal-about"></div>
+        <div class="app-section-label">Conversation</div>
+        <div class="app-thread" id="app-thread"><div class="app-thread-empty">Loading…</div></div>
+      </div>
+      <form class="app-modal-foot" id="app-reply-form">
+        <textarea class="app-reply-box" id="app-reply-box" name="message" maxlength="5000" placeholder="Write a reply to the applicant…" required></textarea>
+        <div class="app-reply-row">
+          <span class="app-reply-status" id="app-reply-status"><span class="app-reply-hint">Sent by email. The applicant's reply will appear here.</span></span>
+          <button type="submit" class="btn-send" id="app-send">Send reply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var overlay = document.getElementById('app-overlay');
+      var titleEl = document.getElementById('app-modal-title');
+      var metaEl = document.getElementById('app-modal-meta');
+      var aboutEl = document.getElementById('app-modal-about');
+      var threadEl = document.getElementById('app-thread');
+      var form = document.getElementById('app-reply-form');
+      var box = document.getElementById('app-reply-box');
+      var sendBtn = document.getElementById('app-send');
+      var statusEl = document.getElementById('app-reply-status');
+      var hintHtml = statusEl.innerHTML;
+      var currentId = null;
+      var currentName = '';
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function fmtDate(d, withTime) {
+        if (!d) return '';
+        var dt = new Date(d);
+        var opts = withTime ? { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' } : { month: '2-digit', day: '2-digit', year: '2-digit' };
+        return dt.toLocaleString('en-US', opts);
+      }
+      function fmtStay(d) { return d ? fmtDate(d) : 'Flexible'; }
+      function setStatus(text, kind) {
+        statusEl.className = 'app-reply-status' + (kind ? ' is-' + kind : '');
+        statusEl.innerHTML = text ? esc(text) : hintHtml;
+      }
+      function messageHtml(m) {
+        var isIn = m.direction === 'in';
+        var who = isIn ? (currentName || m.from_email || 'Applicant') : 'You';
+        var cls = 'msg ' + (isIn ? 'msg-in' : 'msg-out') + (isIn && !m.read_at ? ' is-new' : '');
+        return '<div class="' + cls + '"><span class="msg-meta">' + esc(who) + ' · ' + esc(fmtDate(m.created_at, true)) + '</span>' + esc(m.body_text) + '</div>';
+      }
+      function renderThread(messages) {
+        if (!messages || !messages.length) {
+          threadEl.innerHTML = '<div class="app-thread-empty">No messages yet. Your reply below will be emailed to the applicant.</div>';
+          return;
+        }
+        threadEl.innerHTML = messages.map(messageHtml).join('');
+        threadEl.lastElementChild.scrollIntoView({ block: 'nearest' });
+      }
+      function clearBadge(id) {
+        var row = document.querySelector('tr[data-app-id="' + id + '"]');
+        if (!row) return;
+        row.classList.remove('has-unread');
+        var badge = row.querySelector('.reply-badge');
+        if (badge) badge.textContent = '';
+      }
+
+      function openApp(id) {
+        currentId = id;
+        titleEl.textContent = 'Application';
+        metaEl.textContent = '';
+        aboutEl.textContent = '';
+        threadEl.innerHTML = '<div class="app-thread-empty">Loading…</div>';
+        setStatus('');
+        sendBtn.disabled = false;
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        var row = document.querySelector('tr[data-app-id="' + id + '"]');
+        var hadUnread = row && row.classList.contains('has-unread');
+
+        fetch('/admin/applications/' + id + '/messages', { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data.ok) throw new Error(data.error || 'Failed');
+            var a = data.application;
+            currentName = a.full_name || '';
+            titleEl.textContent = a.full_name;
+            var bits = [];
+            bits.push('<a href="mailto:' + esc(a.email) + '">' + esc(a.email) + '</a>' + (a.phone ? ' · ' + esc(a.phone) : ''));
+            if (a.property || a.move_in || a.move_out) {
+              bits.push(esc(a.property || '') + ((a.move_in || a.move_out) ? (a.property ? ' · ' : '') + esc(fmtStay(a.move_in)) + ' \u2192 ' + esc(fmtStay(a.move_out)) : ''));
+            }
+            bits.push('Applied ' + esc(fmtDate(a.created_at)));
+            metaEl.innerHTML = bits.join('<br>');
+            aboutEl.textContent = a.about || '';
+            renderThread(data.messages);
+            if (hadUnread) {
+              fetch('/admin/applications/' + id + '/messages/read', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                .then(function () { clearBadge(id); })
+                .catch(function () {});
+            }
+            box.focus();
+          })
+          .catch(function (err) {
+            threadEl.innerHTML = '<div class="app-thread-empty">Could not load this application. ' + esc(err.message) + '</div>';
+          });
+      }
+
+      function closeApp() {
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+        currentId = null;
+        box.value = '';
+        setStatus('');
+      }
+
+      document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('[data-open-app]');
+        if (btn) { e.preventDefault(); openApp(btn.getAttribute('data-open-app')); }
+      });
+      document.getElementById('app-close').addEventListener('click', closeApp);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) closeApp(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) closeApp(); });
+      box.addEventListener('keydown', function (e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); }
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!currentId) return;
+        var message = box.value.trim();
+        if (!message) { setStatus('Please write a message before sending.', 'error'); box.focus(); return; }
+        sendBtn.disabled = true;
+        setStatus('Sending…');
+        fetch('/admin/applications/' + currentId + '/reply', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+          body: JSON.stringify({ message: message })
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.data.ok) throw new Error(res.data.error || 'Email could not be sent.');
+            var empty = threadEl.querySelector('.app-thread-empty');
+            if (empty) threadEl.innerHTML = '';
+            threadEl.insertAdjacentHTML('beforeend', messageHtml(res.data.message));
+            threadEl.lastElementChild.scrollIntoView({ block: 'nearest' });
+            box.value = '';
+            setStatus('Reply sent.', 'ok');
+          })
+          .catch(function (err) { setStatus(err.message, 'error'); })
+          .finally(function () { sendBtn.disabled = false; });
+      });
+
+      // Deep link from the "new reply" notification email: ?open=<id>
+      <% if (typeof openId !== 'undefined' && openId) { %>
+      if (document.querySelector('tr[data-app-id="<%= openId %>"]')) openApp(<%= openId %>);
+      <% } %>
+    })();
+  </script>
   <script>
     // Delete a row in place instead of reloading the page. Falls back to the
     // normal form post if the request fails.

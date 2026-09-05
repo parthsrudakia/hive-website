@@ -75,8 +75,28 @@ CREATE TABLE IF NOT EXISTS applications (
   property     VARCHAR(300),
   move_in      DATE,
   move_out     DATE,
+  listing_id   INTEGER,
+  -- Unguessable token for the per-application inbound reply address
+  reply_token  VARCHAR(32),
   created_at   TIMESTAMP DEFAULT NOW()
 );
+
+-- Admin <-> applicant email thread (replies sent from the admin panel and the
+-- applicant's replies received via the Resend inbound webhook)
+CREATE TABLE IF NOT EXISTS application_messages (
+  id             SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  direction      VARCHAR(3) NOT NULL,   -- 'out' (admin -> applicant) | 'in' (applicant -> admin)
+  subject        VARCHAR(300),
+  body_text      TEXT,
+  from_email     VARCHAR(200),
+  message_id     VARCHAR(300),          -- RFC Message-ID (used for In-Reply-To threading)
+  resend_id      VARCHAR(100),          -- Resend email id; dedupes webhook redeliveries
+  read_at        TIMESTAMP,             -- inbound only; NULL = unread
+  created_at     TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS application_messages_resend_idx ON application_messages (resend_id);
+CREATE INDEX IF NOT EXISTS application_messages_app_idx ON application_messages (application_id, created_at);
 
 -- Landlord inquiries ------------------------------------------
 CREATE TABLE IF NOT EXISTS landlord_inquiries (

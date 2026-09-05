@@ -67,7 +67,9 @@ See `.env.example` for the full list. Key variables:
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | Random string for session encryption |
-| `SMTP_USER` / `SMTP_PASS` | Yes | Gmail credentials for form notifications |
+| `RESEND_API_KEY` | Yes | Resend API key for all outbound mail |
+| `MAIL_FROM` / `NOTIFY_EMAIL` | No | Sender identity and the inbox that receives form notifications (default `parth.rudakia@hiveny.com`) |
+| `REPLY_DOMAIN` / `RESEND_WEBHOOK_SECRET` | No | Inbound applicant replies into the admin panel (see below) |
 | `GOOGLE_API_KEY` | No | Google Drive API key for bulk image imports |
 | `GOOGLE_PLACES_API_KEY` | No | Google Places API for reviews widget |
 | `GOOGLE_PLACE_ID` | No | Google Maps Place ID for reviews |
@@ -123,7 +125,9 @@ saverasTest/
 | GET | `/admin/listings/new` | Create new listing |
 | GET | `/admin/listings/:id/edit` | Edit listing |
 | POST | `/admin/listings/:id/delete` | Delete listing |
-| GET | `/admin/applications` | View tenant applications |
+| GET | `/admin/applications` | View tenant applications; "more" opens a popup to reply by email |
+| POST | `/admin/applications/:id/reply` | Email a reply to the applicant (JSON, from the popup) |
+| POST | `/webhooks/resend` | Resend `email.received` webhook: stores applicant replies |
 | GET | `/admin/landlord-inquiries` | View landlord inquiries |
 | GET | `/admin/bookings` | View all bookings |
 
@@ -142,6 +146,7 @@ Tables are auto-created on startup via migrations in `server.js`. Key tables:
 - **listings** — Property listings with images, amenities, pricing
 - **bookings** — Date reservations per listing
 - **applications** — Tenant application submissions
+- **application_messages** — Admin/applicant email thread per application (replies sent from the panel + inbound replies)
 - **landlord_inquiries** — Landlord partnership inquiries
 - **admin_users** — Admin login credentials (bcrypt hashed)
 - **session** — Express session storage
@@ -187,8 +192,19 @@ Images are stored as **Google Drive URLs** in the database. Do NOT use the file 
 
 When someone submits a tenant application or landlord inquiry:
 1. The submission is saved to the database
-2. An email notification is sent to `Vdutta1485@hotmail.com` (hardcoded in `routes/public.js`)
-3. To change the recipient, update the email address in `routes/public.js`
+2. An email notification is sent to `NOTIFY_EMAIL` (default `parth.rudakia@hiveny.com`, set in `utils/mailer.js`), from `MAIL_FROM`
+3. To change the recipient or sender, set `NOTIFY_EMAIL` / `MAIL_FROM` in the environment (Vercel dashboard for production)
+
+### Replying to applicants from the admin panel
+
+On **Admin → Applications**, clicking **more** on a row opens the full application with a reply box. Replies are emailed to the applicant with `Reply-To: app-<id>-<token>@REPLY_DOMAIN`. When the applicant answers, Resend receives the email on that subdomain and calls `/webhooks/resend`; the reply is stored in `application_messages`, the row gets a **"new reply"** badge and moves to the top of the list, and a copy is emailed to `NOTIFY_EMAIL`. Opening the popup clears the badge.
+
+One-time setup for inbound replies:
+1. **Resend → Domains → Add domain** `reply.hiveny.com` (receiving). `hiveny.com` itself keeps its Microsoft 365 MX record, so a subdomain is required.
+2. **Namecheap → Advanced DNS** → add the MX record Resend shows, on host `reply`.
+3. **Resend → Webhooks → Add endpoint** `https://www.hiveny.com/webhooks/resend`, event `email.received`. Copy the signing secret into `RESEND_WEBHOOK_SECRET` on Vercel.
+
+Until this is set up, replies still send fine; applicant answers just won't appear in the panel.
 
 ---
 
@@ -197,7 +213,7 @@ When someone submits a tenant application or landlord inquiry:
 1. **Ephemeral file storage** — Files uploaded via the admin form don't persist on Railway. Use Google Drive links instead.
 2. **No CSRF protection** — Forms don't have CSRF tokens. Consider adding `csurf` middleware.
 3. **Single admin** — Only one admin account. Multi-user support would require role management.
-4. **Hardcoded email recipient** — Notification emails go to a hardcoded address in the route files.
+4. **Single notification recipient** — All notifications go to one address (`NOTIFY_EMAIL`).
 5. **No automated backups** — Railway PostgreSQL should be backed up periodically.
 
 ---

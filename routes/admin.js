@@ -9,7 +9,7 @@ const pool = require('../db/pool');
 const { parseSocialLink } = require('../utils/socialLink');
 const { requireAdmin } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
-const { sendMail, NOTIFY_EMAIL } = require('../utils/mailer');
+const { sendMail, replyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 
 // --- Multer config for image uploads ---
@@ -516,11 +516,23 @@ router.post('/listings/:id/delete', requireAdmin, async (req, res) => {
 });
 
 // --- Applications Tab ---
+// Rows with unread applicant replies float to the top (newest reply first),
+// then everything else newest-submission first.
+const APPLICATIONS_SQL = `
+  SELECT a.*, COALESCE(m.unread, 0)::int AS unread_count, m.last_in_at
+    FROM applications a
+    LEFT JOIN (
+      SELECT application_id,
+             COUNT(*) FILTER (WHERE direction = 'in' AND read_at IS NULL) AS unread,
+             MAX(created_at) FILTER (WHERE direction = 'in') AS last_in_at
+        FROM application_messages
+       GROUP BY application_id
+    ) m ON m.application_id = a.id
+   ORDER BY (COALESCE(m.unread, 0) > 0) DESC, m.last_in_at DESC NULLS LAST, a.created_at DESC`;
+
 router.get('/applications', requireAdmin, async (req, res) => {
   try {
-    const { rows: applications } = await pool.query(
-      'SELECT * FROM applications ORDER BY created_at DESC'
-    );
+    const { rows: applications } = await pool.query(APPLICATIONS_SQL);
     // Resolve each application to a listing so the property is clickable.
     // New rows carry listing_id; older rows only have the public title text,
     // so fall back to matching that against the current listings.
@@ -542,13 +554,148 @@ router.get('/applications', requireAdmin, async (req, res) => {
       // Older rows may hold non-Instagram/LinkedIn links; those render as-is.
       app.social = parseSocialLink(app.social_media);
     }
+    const openId = /^\d+$/.test(String(req.query.open || '')) ? parseInt(req.query.open, 10) : null;
     res.render('admin/applications', {
       applications,
+      openId,
       adminName: req.session.adminName
     });
   } catch (err) {
     console.error('Applications error:', err);
-    res.render('admin/applications', { applications: [], adminName: req.session.adminName });
+    res.render('admin/applications', { applications: [], openId: null, adminName: req.session.adminName });
+  }
+});
+
+// --- Application reply thread (popup on the Applications tab) ---
+
+const MESSAGE_COLS = 'id, direction, subject, body_text, from_email, read_at, created_at';
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Thread + application details for the popup.
+router.get('/applications/:id/messages', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, full_name, email, phone, about, social_media, property, move_in, move_out, listing_id, created_at FROM applications WHERE id = $1',
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ ok: false, error: 'Application not found' });
+    const { rows: messages } = await pool.query(
+      `SELECT ${MESSAGE_COLS} FROM application_messages WHERE application_id = $1 ORDER BY created_at ASC, id ASC`,
+      [req.params.id]
+    );
+    res.json({ ok: true, application: rows[0], messages });
+  } catch (err) {
+    console.error('Application messages error:', err);
+    res.status(500).json({ ok: false, error: 'Could not load messages' });
+  }
+});
+
+// Opening the popup clears the row's "new reply" badge.
+router.post('/applications/:id/messages/read', requireAdmin, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE application_messages SET read_at = NOW()
+        WHERE application_id = $1 AND direction = 'in' AND read_at IS NULL`,
+      [req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark messages read error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+
+// Sends outbound email from the admin session; cap it so a hijacked session
+// can't turn the panel into a relay.
+const replyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new PgRateLimitStore({ prefix: 'admin-reply', windowMs: 15 * 60 * 1000 }),
+  handler: (req, res) => res.status(429).json({ ok: false, error: 'Too many replies sent. Please wait a few minutes and try again.' })
+});
+
+router.post('/applications/:id/reply', requireAdmin, replyLimiter, async (req, res) => {
+  const message = String((req.body && req.body.message) || '').replace(/\r\n?/g, '\n').trim();
+  if (!message) return res.status(400).json({ ok: false, error: 'Please write a message before sending.' });
+  if (message.length > 5000) return res.status(400).json({ ok: false, error: 'Message is too long (max 5000 characters).' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, full_name, email, reply_token FROM applications WHERE id = $1',
+      [req.params.id]
+    );
+    const app = rows[0];
+    if (!app) return res.status(404).json({ ok: false, error: 'Application not found' });
+
+    // The inbound address token is minted on first reply and never rotated,
+    // so an applicant can answer any of our emails months later.
+    if (!app.reply_token) {
+      app.reply_token = crypto.randomBytes(8).toString('hex');
+      await pool.query('UPDATE applications SET reply_token = $1 WHERE id = $2 AND reply_token IS NULL', [app.reply_token, app.id]);
+      const fresh = await pool.query('SELECT reply_token FROM applications WHERE id = $1', [app.id]);
+      app.reply_token = fresh.rows[0].reply_token;
+    }
+
+    // Thread onto the applicant's latest reply (In-Reply-To / References) so
+    // their mail client keeps the conversation together.
+    const { rows: inbound } = await pool.query(
+      `SELECT subject, message_id FROM application_messages
+        WHERE application_id = $1 AND direction = 'in' AND message_id IS NOT NULL
+        ORDER BY created_at ASC, id ASC`,
+      [app.id]
+    );
+    const last = inbound[inbound.length - 1];
+    const baseSubject = 'Your Hive application';
+    let subject = `Re: ${baseSubject}`;
+    if (last && last.subject) {
+      subject = /^re:/i.test(last.subject.trim()) ? last.subject.trim() : `Re: ${last.subject.trim()}`;
+    }
+    const headers = {};
+    if (last) {
+      headers['In-Reply-To'] = last.message_id;
+      headers['References'] = inbound.map(m => m.message_id).join(' ');
+    }
+
+    const html = `
+      <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a18;">
+        <p style="line-height: 1.6; color: #1a1a18; white-space: pre-wrap;">${escapeHtml(message)}</p>
+        <p style="line-height: 1.6; color: #444;">Warm regards,<br>Parth Rudakia<br>Hive · <a href="https://hiveny.com" style="color: #d4920b;">hiveny.com</a></p>
+        <p style="margin-top: 20px; color: #888; font-size: 12px;">Reply to this email and it will reach us directly.</p>
+      </div>`;
+
+    let resendId = null;
+    try {
+      resendId = await sendMail({
+        to: app.email,
+        replyTo: replyAddress(app),
+        subject,
+        text: `${message}\n\nWarm regards,\nParth Rudakia\nHive · hiveny.com\n\nReply to this email and it will reach us directly.`,
+        html,
+        headers
+      });
+    } catch (mailErr) {
+      console.error('[mail] Failed to send admin reply:', mailErr.message);
+      return res.status(502).json({ ok: false, error: 'Email could not be sent. Please try again.' });
+    }
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(503).json({ ok: false, error: 'Email is not configured (RESEND_API_KEY missing).' });
+    }
+
+    const { rows: saved } = await pool.query(
+      `INSERT INTO application_messages (application_id, direction, subject, body_text, from_email, resend_id)
+       VALUES ($1, 'out', $2, $3, $4, $5)
+       RETURNING ${MESSAGE_COLS}`,
+      [app.id, subject, message, process.env.MAIL_FROM || null, resendId]
+    );
+    res.json({ ok: true, message: saved[0] });
+  } catch (err) {
+    console.error('Application reply error:', err);
+    res.status(500).json({ ok: false, error: 'Something went wrong. Please try again.' });
   }
 });
 

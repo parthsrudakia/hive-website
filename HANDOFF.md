@@ -10,7 +10,8 @@ Hive is a website for listing furnished, flexible-lease apartments. It has:
 
 - **A public website** where people can browse available apartments, view photos and details, and apply to rent
 - **An admin panel** where you can add/edit/remove apartment listings, view tenant applications, and manage bookings
-- **Automatic email notifications** — when someone fills out the tenant application or landlord inquiry form, an email is sent to Vdutta1485@hotmail.com
+- **Automatic email notifications** — when someone fills out the tenant application or landlord inquiry form, an email is sent to parth.rudakia@hiveny.com (the `NOTIFY_EMAIL` setting)
+- **Reply to applicants from the admin panel** — on the Applications tab, click **more** on a row to see the full application and send a reply by email. When the applicant writes back, their reply shows up in that same popup, the row gets a "new reply" badge and moves to the top, and a copy is emailed to the notification address
 
 The site is live at: **https://hiveny.com** (or https://hive-app-production-6bea.up.railway.app)
 
@@ -23,7 +24,7 @@ The site is live at: **https://hiveny.com** (or https://hive-app-production-6bea
 | **Railway** (hosting) | ~$5/month (Hobby plan) | Runs the website and database |
 | **Namecheap** (domain) | ~$10–15/year | Owns the hiveny.com web address |
 | **Google Cloud** (APIs) | Free (within free tier) | Powers the Google Drive image imports |
-| **Gmail** (email) | Free | Sends email notifications when forms are submitted |
+| **Resend** (email) | Free tier | Sends email notifications and delivers applicant replies to the admin panel |
 
 **Total: roughly $6–7/month**
 
@@ -40,7 +41,7 @@ The site is live at: **https://hiveny.com** (or https://hive-app-production-6bea
 3. From the dashboard you can:
    - Add new apartment listings
    - Edit or delete existing listings
-   - View tenant applications
+   - View tenant applications and reply to applicants by email (click **more** on a row)
    - View landlord inquiries
    - Manage bookings
 
@@ -89,8 +90,11 @@ These are secret settings the site needs to run. They're stored on Railway (not 
 |----------|-----------|
 | `DATABASE_URL` | Connection to the database (Railway sets this automatically) |
 | `SESSION_SECRET` | A random string that keeps admin logins secure |
-| `SMTP_USER` | The Gmail address used to send notification emails |
-| `SMTP_PASS` | The Gmail app password (not your regular Gmail password) |
+| `RESEND_API_KEY` | Resend API key used to send all email |
+| `MAIL_FROM` | The address email is sent from (Hive <parth.rudakia@hiveny.com>) |
+| `NOTIFY_EMAIL` | Where form notifications and applicant replies are delivered (parth.rudakia@hiveny.com) |
+| `REPLY_DOMAIN` | Subdomain (reply.hiveny.com) whose MX record points at Resend so applicant replies reach the admin panel |
+| `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend "email.received" webhook |
 | `GOOGLE_API_KEY` | API key for importing images from Google Drive folders |
 | `GOOGLE_PLACES_API_KEY` | API key for showing Google reviews on the homepage |
 | `GOOGLE_PLACE_ID` | Your Google Maps business listing ID |
@@ -147,7 +151,8 @@ Good places to find developers:
 | **Edit a listing** | Admin panel → click the listing → edit → save |
 | **Change photos** | Upload to Google Drive → share folder → paste link in admin |
 | **Mark a unit as rented** | Edit listing → change status to "Rented" |
-| **Change notification email** | A developer needs to update the email address in the code (`routes/public.js`) |
+| **Change notification email** | Update the `NOTIFY_EMAIL` environment variable on the hosting dashboard |
+| **Reply to an applicant** | Admin panel → Applications → click **more** on the row → type in the reply box → Send reply |
 | **Update site copy/text** | A developer edits the template files in `views/public/` |
 | **Change colors or styling** | A developer edits the CSS in the template files |
 | **Add a new page** | A developer creates a new template and route |
@@ -190,7 +195,7 @@ When you're ready to bring on a new developer, give them:
 
 1. **Don't upload images through the file picker in the admin panel** — those files get deleted every time the site redeploys. Always use Google Drive links.
 2. **Back up the database periodically** — Railway doesn't do automatic backups on the free/hobby plan. A developer can set this up.
-3. **The Gmail app password** (SMTP_PASS) is not your regular Gmail password. It's a special "App Password" generated in Gmail settings. If it stops working, you'll need to generate a new one.
+3. **Email is sent through Resend** (RESEND_API_KEY). If mail stops sending, check the Resend dashboard (resend.com) for the API key and domain status.
 4. **The admin password** should be changed after handoff. A developer can update it in the database.
 
 ---

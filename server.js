@@ -33,6 +33,9 @@ app.use((req, res, next) => {
 // Stripe webhooks must be mounted BEFORE the body parsers: signature
 // verification needs the raw request body, which express.json() would consume.
 app.use('/webhooks', require('./routes/stripeWebhook'));
+// Resend inbound-mail webhook (applicant replies to admin messages). Also needs
+// the raw body for signature verification, so it's mounted here as well.
+app.use('/webhooks', require('./routes/resendWebhook'));
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -132,6 +135,23 @@ app.use(session({
       // Which listing an /apply inquiry came from (via the listing page's "Book Now"),
       // so the admin Applications tab can link straight to the property.
       `ALTER TABLE applications ADD COLUMN IF NOT EXISTS listing_id INTEGER`,
+      // Admin <-> applicant email thread. `reply_token` makes the per-application
+      // inbound address (app-<id>-<token>@REPLY_DOMAIN) unguessable.
+      `ALTER TABLE applications ADD COLUMN IF NOT EXISTS reply_token VARCHAR(32)`,
+      `CREATE TABLE IF NOT EXISTS application_messages (
+        id SERIAL PRIMARY KEY,
+        application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        direction VARCHAR(3) NOT NULL,
+        subject VARCHAR(300),
+        body_text TEXT,
+        from_email VARCHAR(200),
+        message_id VARCHAR(300),
+        resend_id VARCHAR(100),
+        read_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS application_messages_resend_idx ON application_messages (resend_id)`,
+      `CREATE INDEX IF NOT EXISTS application_messages_app_idx ON application_messages (application_id, created_at)`,
       // Forgot-password flow: a hashed single-use reset token + expiry.
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR(64)`,
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`
