@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const pool = require('../db/pool');
-const { sendMail, parseReplyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
+const { parseReplyAddress } = require('../utils/mailer');
 const { verifySvixSignature, stripQuotedReply, htmlToText } = require('../utils/resendWebhook');
 
 // Resend "email.received" webhook: applicant replies to messages the admin
@@ -12,7 +12,8 @@ const { verifySvixSignature, stripQuotedReply, htmlToText } = require('../utils/
 // subdomain's MX record points at Resend, which POSTs here for each received
 // email. We match the address to an application, fetch the body from the
 // Receiving API (the webhook only carries metadata), keep the new text, and
-// store it as an unread inbound message so the panel can show a badge.
+// store it as an unread inbound message so the panel can show a badge. No
+// email is sent for replies; the admin panel badge is the notification.
 //
 // IMPORTANT: mounted in server.js BEFORE express.json() — signature
 // verification needs the raw, unparsed request body.
@@ -31,10 +32,6 @@ async function fetchReceivedEmail(emailId) {
   });
   if (!res.ok) throw new Error(`Resend receiving ${res.status}: ${await res.text()}`);
   return res.json();
-}
-
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 router.post('/resend', express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
@@ -109,23 +106,6 @@ router.post('/resend', express.raw({ type: '*/*', limit: '1mb' }), async (req, r
       return res.json({ received: true, duplicate: true }); // webhook redelivery
     }
     console.log(`[resend-webhook] Stored reply from ${data.from} on application #${app.id}`);
-
-    // Heads-up copy to the master inbox; the row is already saved.
-    try {
-      const base = process.env.SITE_URL || 'https://www.hiveny.com';
-      await sendMail({
-        to: NOTIFY_EMAIL,
-        subject: `Reply from ${app.full_name} — Hive Application #${app.id}`,
-        html: `
-          <h2>New reply on application #${app.id}</h2>
-          <p style="line-height:1.6;color:#444;"><strong>${escapeHtml(app.full_name)}</strong> (${escapeHtml(app.email)}) replied:</p>
-          <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #d4920b;background:#f8f6f2;white-space:pre-wrap;line-height:1.6;color:#1a1a18;">${escapeHtml(text)}</blockquote>
-          <p style="line-height:1.6;color:#444;">Reply from the admin panel: <a href="${base}/admin/applications?open=${app.id}" style="color:#d4920b;">${base}/admin/applications</a></p>
-          <p style="margin-top:20px;color:#888;font-size:12px;">Replies sent to this notification are not delivered to the applicant.</p>`
-      });
-    } catch (mailErr) {
-      console.error('[resend-webhook] Failed to send reply notification:', mailErr.message);
-    }
 
     res.json({ received: true });
   } catch (err) {

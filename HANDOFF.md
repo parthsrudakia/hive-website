@@ -10,8 +10,8 @@ Hive is a website for listing furnished, flexible-lease apartments. It has:
 
 - **A public website** where people can browse available apartments, view photos and details, and apply to rent
 - **An admin panel** where you can add/edit/remove apartment listings, view tenant applications, and manage bookings
-- **Automatic email notifications** — when someone fills out the tenant application or landlord inquiry form, an email is sent to parth.rudakia@hiveny.com (the `NOTIFY_EMAIL` setting)
-- **Reply to applicants from the admin panel** — on the Applications tab, click **more** on a row to see the full application and send a reply by email. When the applicant writes back, their reply shows up in that same popup, the row gets a "new reply" badge and moves to the top, and a copy is emailed to the notification address
+- **Automatic email notifications** — when someone fills out the landlord inquiry or contact form, an email is sent to parth.rudakia@hiveny.com (the `NOTIFY_EMAIL` setting). Tenant applications do not send an email; they appear on the admin panel's Applications tab
+- **Reply to applicants from the admin panel** — on the Applications tab, click **more** on a row to see the full application and send a reply by email. When the applicant writes back, their reply shows up in that same popup and the row gets a "new reply" badge and moves to the top (no email is sent for replies)
 
 The site is live at: **https://hiveny.com** (or https://hive-app-production-6bea.up.railway.app)
 
@@ -92,7 +92,7 @@ These are secret settings the site needs to run. They're stored on Railway (not 
 | `SESSION_SECRET` | A random string that keeps admin logins secure |
 | `RESEND_API_KEY` | Resend API key used to send all email |
 | `MAIL_FROM` | The address email is sent from (Hive <parth.rudakia@hiveny.com>) |
-| `NOTIFY_EMAIL` | Where form notifications and applicant replies are delivered (parth.rudakia@hiveny.com) |
+| `NOTIFY_EMAIL` | Where landlord-inquiry, contact, and paid-application notifications are delivered (parth.rudakia@hiveny.com) |
 | `REPLY_DOMAIN` | Subdomain (reply.hiveny.com) whose MX record points at Resend so applicant replies reach the admin panel |
 | `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend "email.received" webhook |
 | `GOOGLE_API_KEY` | API key for importing images from Google Drive folders |

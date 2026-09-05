@@ -68,7 +68,7 @@ See `.env.example` for the full list. Key variables:
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | Random string for session encryption |
 | `RESEND_API_KEY` | Yes | Resend API key for all outbound mail |
-| `MAIL_FROM` / `NOTIFY_EMAIL` | No | Sender identity and the inbox that receives form notifications (default `parth.rudakia@hiveny.com`) |
+| `MAIL_FROM` / `NOTIFY_EMAIL` | No | Sender identity and the inbox that receives landlord-inquiry, contact, and paid-application notifications (default `parth.rudakia@hiveny.com`) |
 | `REPLY_DOMAIN` / `RESEND_WEBHOOK_SECRET` | No | Inbound applicant replies into the admin panel (see below) |
 | `GOOGLE_API_KEY` | No | Google Drive API key for bulk image imports |
 | `GOOGLE_PLACES_API_KEY` | No | Google Places API for reviews widget |
@@ -190,14 +190,16 @@ Images are stored as **Google Drive URLs** in the database. Do NOT use the file 
 
 ## Email Notifications
 
-When someone submits a tenant application or landlord inquiry:
+When someone submits a landlord inquiry or contact message:
 1. The submission is saved to the database
 2. An email notification is sent to `NOTIFY_EMAIL` (default `parth.rudakia@hiveny.com`, set in `utils/mailer.js`), from `MAIL_FROM`
 3. To change the recipient or sender, set `NOTIFY_EMAIL` / `MAIL_FROM` in the environment (Vercel dashboard for production)
 
+Tenant applications (`/apply`) and applicant replies do **not** email the inbox; they are reviewed and answered on **Admin → Applications**. The applicant still gets a confirmation email. Paid applications and Stripe Identity results still notify the inbox.
+
 ### Replying to applicants from the admin panel
 
-On **Admin → Applications**, clicking **more** on a row opens the full application with a reply box. Replies are emailed to the applicant with `Reply-To: app-<id>-<token>@REPLY_DOMAIN`. When the applicant answers, Resend receives the email on that subdomain and calls `/webhooks/resend`; the reply is stored in `application_messages`, the row gets a **"new reply"** badge and moves to the top of the list, and a copy is emailed to `NOTIFY_EMAIL`. Opening the popup clears the badge.
+On **Admin → Applications**, clicking **more** on a row opens the full application with a reply box. Replies are emailed to the applicant with `Reply-To: app-<id>-<token>@REPLY_DOMAIN`. When the applicant answers, Resend receives the email on that subdomain and calls `/webhooks/resend`; the reply is stored in `application_messages`, and the row gets a **"new reply"** badge and moves to the top of the list. No email is sent for replies; the badge is the notification. Opening the popup clears the badge.
 
 One-time setup for inbound replies:
 1. **Resend → Domains → Add domain** `reply.hiveny.com` (receiving). `hiveny.com` itself keeps its Microsoft 365 MX record, so a subdomain is required.

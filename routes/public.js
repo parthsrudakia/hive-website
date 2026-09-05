@@ -706,34 +706,8 @@ router.post('/apply', applyLimiter, async (req, res) => {
       [full_name, email, phone || null, about, social.url, property || null, move_in || null, move_out || null, listingId]
     );
 
-    // Optional booking context carried over from a listing's "Book Now" button.
-    const stayRange = (move_in || move_out) ? `${move_in || 'Flexible'} to ${move_out || 'Flexible'}` : '';
-    const bookingRows = `
-        ${property ? `<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Property</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${property}</td></tr>` : ''}
-        ${stayRange ? `<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Requested Dates</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${stayRange}</td></tr>` : ''}`;
-
-    // Notify the master inbox with the submitted details (best-effort — already saved)
-    try {
-      await sendMail({
-        to: NOTIFY_EMAIL,
-        replyTo: email,
-        subject: `New Hive Application: ${full_name}`,
-        html: `
-        <h2>New Tenant Application</h2>
-        <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; width: 160px;">Name</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${full_name}</td></tr>
-          ${bookingRows}
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${email}</td></tr>
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Phone</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${phone || 'Not provided'}</td></tr>
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">About</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${about}</td></tr>
-          <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">${social.label}</td><td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="${social.url}">${social.url}</a></td></tr>
-        </table>
-        <p style="margin-top: 20px; color: #888; font-size: 12px;">Submitted via Hive Application Form</p>
-      `
-      });
-    } catch (mailErr) {
-      console.error('[mail] Failed to send application notification:', mailErr.message);
-    }
+    // No inbox notification for tenant applications: the admin Applications tab
+    // is where they are reviewed and replied to.
 
     // Send a confirmation to the applicant (best-effort)
     try {
