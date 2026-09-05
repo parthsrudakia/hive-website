@@ -63,8 +63,12 @@
   </div>
 
   <main class="admin-content">
+    <% const newCount = bookings.filter(b => !b.opened_at).length; %>
     <div class="admin-header">
-      <h2>Bookings <span class="count">(<%= bookings.length %>)</span></h2>
+      <h2>Bookings <span class="count">(<%= bookings.length %><% if (newCount > 0) { %> · <span class="new-count"><%= newCount %> new</span><% } %>)</span></h2>
+      <div class="admin-header-actions">
+        <button type="button" class="btn-seen-all" id="seen-all" <%= newCount > 0 ? '' : 'hidden' %>>Mark all as seen</button>
+      </div>
     </div>
 
     <% if (bookings.length === 0) { %>
@@ -89,11 +93,14 @@
           </thead>
           <tbody>
             <% bookings.forEach(function(booking) { %>
-            <tr>
+            <tr data-row-id="<%= booking.id %>" class="<%= !booking.opened_at ? 'is-unopened' : '' %>"<% if (!booking.opened_at) { %> title="Click to mark as seen"<% } %>>
               <td class="booking-listing">
                 <a href="/admin/listings/<%= booking.listing_id %>/edit"><%= booking.listing_title || 'Listing #' + booking.listing_id %></a>
               </td>
-              <td class="booking-guest"><%= booking.guest_name || '—' %></td>
+              <td class="booking-guest">
+                <div><%= booking.guest_name || '—' %></div>
+                <span class="new-badge"><% if (!booking.opened_at) { %>New<% } %></span>
+              </td>
               <td class="booking-dates"><%= new Date(booking.check_in).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) %></td>
               <td class="booking-dates"><%= new Date(booking.check_out).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) %></td>
               <td>
@@ -127,6 +134,7 @@
       </div>
     <% } %>
   </main>
+  <%- include('../partials/mark-seen', { basePath: '/admin/bookings', nameClass: '.booking-guest' }) %>
   <script>
     // Delete a row in place instead of reloading the page. Falls back to the
     // normal form post if the request fails.

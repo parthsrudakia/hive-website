@@ -166,6 +166,13 @@ app.use(session({
            UPDATE landlord_inquiries SET opened_at = created_at;
          END IF;
        END $$`,
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name = 'bookings' AND column_name = 'opened_at') THEN
+           ALTER TABLE bookings ADD COLUMN opened_at TIMESTAMP;
+           UPDATE bookings SET opened_at = created_at;
+         END IF;
+       END $$`,
       `CREATE TABLE IF NOT EXISTS application_messages (
         id SERIAL PRIMARY KEY,
         application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,

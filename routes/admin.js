@@ -923,6 +923,25 @@ router.get('/bookings', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/bookings/seen-all', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE bookings SET opened_at = NOW() WHERE opened_at IS NULL');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark bookings seen error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+router.post('/bookings/:id/seen', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE bookings SET opened_at = NOW() WHERE id = $1 AND opened_at IS NULL', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark booking seen error:', err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 router.post('/bookings/:id/delete', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM bookings WHERE id = $1', [req.params.id]);

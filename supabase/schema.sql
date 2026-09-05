@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   check_in    DATE NOT NULL,
   check_out   DATE NOT NULL,
   notes       TEXT,
+  -- First time the admin marked it seen on the Bookings tab (NULL = shown as "New")
+  opened_at   TIMESTAMP,
   created_at  TIMESTAMP DEFAULT NOW()
 );
 
