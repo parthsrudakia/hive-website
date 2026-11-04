@@ -117,6 +117,9 @@ CREATE TABLE IF NOT EXISTS landlord_inquiries (
   referral_source   VARCHAR(200),
   -- First time the admin marked it seen in the panel (NULL = shown as "New")
   opened_at         TIMESTAMP,
+  -- Flagged by utils/spamCheck.js: team email tagged, no confirmation sent, hidden in the admin by default
+  is_spam           BOOLEAN NOT NULL DEFAULT FALSE,
+  spam_reason       TEXT,
   created_at        TIMESTAMP DEFAULT NOW()
 );
 

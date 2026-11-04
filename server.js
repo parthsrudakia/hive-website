@@ -166,6 +166,11 @@ app.use(session({
            UPDATE landlord_inquiries SET opened_at = created_at;
          END IF;
        END $$`,
+      // Landlord inquiries flagged by utils/spamCheck: saved, emailed with a
+      // tagged subject but not confirmed to the sender, and hidden on the
+      // admin tab unless the Spam toggle is on.
+      `ALTER TABLE landlord_inquiries ADD COLUMN IF NOT EXISTS is_spam BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE landlord_inquiries ADD COLUMN IF NOT EXISTS spam_reason TEXT`,
       `DO $$ BEGIN
          IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                          WHERE table_name = 'bookings' AND column_name = 'opened_at') THEN

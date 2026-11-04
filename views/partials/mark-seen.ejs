@@ -22,7 +22,8 @@
       var count = document.querySelector('.admin-header .count');
       var seenAll = document.getElementById('seen-all');
       var remaining = document.querySelectorAll('tr.is-unopened').length;
-      var total = document.querySelectorAll('tr[data-row-id]').length;
+      // Spam rows (landlord inquiries) are listed but not counted.
+      var total = document.querySelectorAll('tr[data-row-id]:not(.is-spam)').length;
       if (count) count.innerHTML = '(' + total + (remaining ? ' · <span class="new-count">' + remaining + ' new</span>' : '') + ')';
       if (seenAll) seenAll.hidden = remaining === 0;
     }
