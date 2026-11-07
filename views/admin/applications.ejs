@@ -55,6 +55,8 @@
     .app-property { color: var(--accent-dark); text-decoration: underline; text-decoration-color: rgba(0,0,0,0.25); text-underline-offset: 2px; }
     .app-property:hover { text-decoration-color: currentColor; }
     .app-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    /* Every /apply entry is a waitlist sign-up (the listings aren't open yet). */
+    .waitlist-badge { display: inline-block; margin-bottom: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--accent-dark); background: #fdf3dc; border-radius: 999px; white-space: nowrap; }
 
     .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
     .empty-state p { font-size: 15px; }
@@ -165,6 +167,7 @@
                 <% if (app.phone) { %><div class="app-email"><%= app.phone %></div><% } %>
               </td>
               <td>
+                <div><span class="waitlist-badge">Waitlist</span></div>
                 <% if (app.property || app.move_in || app.move_out) { %>
                   <% if (app.listing_url) { %>
                     <div><a class="app-property" href="<%= app.listing_url %>" target="_blank" rel="noopener" title="<%= app.listing_title || '' %>"><%= app.property || app.listing_title %></a></div>
@@ -332,7 +335,7 @@
             if (a.property || a.move_in || a.move_out) {
               bits.push(esc(a.property || '') + ((a.move_in || a.move_out) ? (a.property ? ' · ' : '') + esc(fmtStay(a.move_in)) + ' \u2192 ' + esc(fmtStay(a.move_out)) : ''));
             }
-            bits.push('Applied ' + esc(fmtDate(a.created_at)));
+            bits.push('Joined the waitlist ' + esc(fmtDate(a.created_at)));
             metaEl.innerHTML = bits.join('<br>');
             aboutEl.textContent = a.about || '';
             renderThread(data.messages);

@@ -570,9 +570,11 @@ body {
 <!-- PROPERTIES -->
 <section class="properties-section">
   <div class="container">
+    <% if (!locals.comingSoonMarket) { %>
     <div class="properties-top">
       <p class="properties-count">Showing <%= listings.length %> <%= listings.length === 1 ? 'property' : 'properties' %></p>
     </div>
+    <% } %>
     <div class="properties-grid">
       <%
       // Format a DATE column as YYYY-MM-DD (local components) for the date filter; '' when unset.
@@ -623,7 +625,9 @@ body {
         </div>
       </a>
       <% }); %>
-      <% if (listings.length === 0) { %>
+      <% if (locals.comingSoonMarket) { %>
+      <%- include('../partials/coming-soon', { comingSoonCity: comingSoonMarket.name }) %>
+      <% } else if (listings.length === 0) { %>
       <div style="grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted);">
         <p style="font-size: 1.1rem;">No properties match these filters. Try a different city, date range, or budget.</p>
       </div>

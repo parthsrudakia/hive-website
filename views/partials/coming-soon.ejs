@@ -1,0 +1,104 @@
+<%# Coming-soon panel for a market with no homes yet (utils/markets.js comingSoon).
+    Shown instead of the listing grid, with a short waitlist sign-up that posts to
+    the same /apply route and storage as the listing pages, with no listing selected.
+    Locals: comingSoonCity, plus formToken / turnstileSiteKey from routes/public.js. %>
+<style>
+.cs-panel { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 40px; padding: 44px; background: #f6f1e8; border: 1px solid #e3dccf; border-left: 3px solid #d4920b; }
+.cs-eyebrow { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #a76d03; margin-bottom: 14px; }
+.cs-copy h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(2rem, 3.4vw, 2.8rem); font-weight: 400; line-height: 1.08; color: #1a1a18; margin: 0 0 16px; }
+.cs-copy p { font-size: 0.98rem; line-height: 1.65; color: #706c64; margin: 0 0 12px; }
+.cs-form { display: flex; flex-direction: column; gap: 16px; }
+.cs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cs-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cs-field label, .cs-question { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #706c64; }
+.cs-question { margin-bottom: -6px; }
+.cs-field input, .cs-field textarea { width: 100%; font: inherit; font-size: 0.92rem; color: #1a1a18; padding: 11px 13px; border: 1px solid #e3dccf; background: #fff; border-radius: 0; outline: none; }
+.cs-field input:focus, .cs-field textarea:focus { border-color: #a76d03; }
+.cs-field textarea { min-height: 84px; resize: vertical; }
+.cs-submit { align-self: flex-start; padding: 14px 26px; font: inherit; font-size: 0.9rem; font-weight: 600; color: #fff; background: #1a1a18; border: none; cursor: pointer; }
+.cs-submit:hover { background: #a76d03; }
+.cs-optional { font-weight: 400; text-transform: none; letter-spacing: 0; }
+@media (max-width: 860px) {
+  .cs-panel { grid-template-columns: 1fr; gap: 28px; padding: 28px 20px; }
+}
+@media (max-width: 520px) {
+  .cs-row { grid-template-columns: 1fr; }
+  .cs-submit { align-self: stretch; }
+}
+</style>
+<div class="cs-panel" id="coming-soon">
+  <div class="cs-copy">
+    <div class="cs-eyebrow">Coming soon</div>
+    <h2 id="coming-soon-heading">Coming soon to <%= comingSoonCity %></h2>
+    <p>Hive homes in <%= comingSoonCity %> aren't open yet. Join the waitlist and we'll reach out when a room that fits your dates opens up.</p>
+  </div>
+  <form class="cs-form" action="/apply" method="POST" aria-label="Join the <%= comingSoonCity %> waitlist">
+    <!-- Spam guards: honeypot (hidden from humans) + signed render timestamp -->
+    <div style="position:absolute !important;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+      <label>Company Website</label>
+      <input type="text" name="company_website" tabindex="-1" autocomplete="off">
+    </div>
+    <input type="hidden" name="form_ts" value="<%= formToken %>">
+    <input type="hidden" name="property" value="<%= comingSoonCity %>">
+    <input type="hidden" name="listing_id" value="">
+    <div class="cs-row">
+      <div class="cs-field">
+        <label for="cs-full-name">Full name</label>
+        <input type="text" id="cs-full-name" name="full_name" placeholder="Your full name" required minlength="2" maxlength="100" pattern="[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'\-]+" title="Letters, spaces, apostrophes and hyphens only">
+      </div>
+      <div class="cs-field">
+        <label for="cs-email">Email</label>
+        <input type="email" id="cs-email" name="email" placeholder="you@email.com" required maxlength="200">
+      </div>
+    </div>
+    <div class="cs-row">
+      <div class="cs-field">
+        <label for="cs-phone">Phone</label>
+        <input type="tel" id="cs-phone" name="phone" placeholder="(555) 123-4567" required minlength="7" maxlength="20" pattern="[0-9()+\-. ]{7,20}" title="Digits, spaces and ()+-. only, at least 7 digits">
+      </div>
+      <div class="cs-field">
+        <label for="cs-social">Instagram or LinkedIn</label>
+        <input type="text" id="cs-social" name="social_media" placeholder="linkedin.com/in/yourname" required minlength="3" maxlength="300" pattern="(https?://)?([A-Za-z0-9-]+\.)*([Ii]nstagram|[Ll]inked[Ii]n)\.com/.+" title="A link to your Instagram or LinkedIn profile, e.g. instagram.com/yourname or linkedin.com/in/yourname">
+      </div>
+    </div>
+    <span class="cs-question">When would you like to move in? <span class="cs-optional">(optional)</span></span>
+    <div class="cs-row">
+      <div class="cs-field">
+        <label for="cs-move-in">Move in</label>
+        <input type="date" id="cs-move-in" name="move_in">
+      </div>
+      <div class="cs-field">
+        <label for="cs-move-out">Move out</label>
+        <input type="date" id="cs-move-out" name="move_out">
+      </div>
+    </div>
+    <div class="cs-field">
+      <label for="cs-about">A little about you</label>
+      <textarea id="cs-about" name="about" placeholder="What brings you to <%= comingSoonCity %>, and what are you looking for?" required minlength="10" maxlength="2000"></textarea>
+    </div>
+    <% if (locals.turnstileSiteKey) { %>
+    <div class="cf-turnstile" data-sitekey="<%= turnstileSiteKey %>"></div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <% } %>
+    <button type="submit" class="cs-submit">Join the waitlist</button>
+  </form>
+</div>
+<script>
+(function () {
+  // Same 30-day minimum stay as the other date pickers.
+  var moveIn = document.getElementById('cs-move-in');
+  var moveOut = document.getElementById('cs-move-out');
+  if (!moveIn || !moveOut) return;
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  var today = iso(new Date());
+  moveIn.min = today;
+  moveOut.min = today;
+  moveIn.addEventListener('change', function () {
+    if (!moveIn.value) return;
+    var d = new Date(moveIn.value + 'T00:00:00');
+    d.setDate(d.getDate() + 30);
+    moveOut.min = iso(d);
+    if (moveOut.value && moveOut.value < moveOut.min) moveOut.value = moveOut.min;
+  });
+})();
+</script>

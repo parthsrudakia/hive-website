@@ -33,8 +33,8 @@ const PAGE_DEFAULTS = {
     description: 'Read the terms that apply when browsing Hive listings, submitting an application, or using the Hive website.'
   },
   '/apply': {
-    title: 'Rental Application | Hive',
-    description: 'Tell Hive what you are looking for and submit an inquiry about a furnished apartment.',
+    title: 'Join the Waitlist | Hive',
+    description: 'Join the Hive waitlist and tell us when you would like to move in. We will reach out when a furnished room that fits your dates opens up.',
     noindex: true
   },
   '/apply-now': {

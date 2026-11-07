@@ -193,8 +193,11 @@
     </form>
   </div>
 
-  <section class="section" aria-labelledby="available-heading">
+  <section class="section" aria-labelledby="<%= market.comingSoon ? 'coming-soon-heading' : 'available-heading' %>">
     <div class="container">
+      <% if (market.comingSoon) { %>
+      <%- include('../partials/coming-soon', { comingSoonCity: market.name }) %>
+      <% } else { %>
       <div class="section-head">
         <div><div class="section-label">Current homes</div><h2 id="available-heading">Furnished apartments in <%= market.name %></h2></div>
         <div class="count"><%= listings.length %> <%= listings.length === 1 ? 'home' : 'homes' %> matching</div>
@@ -218,6 +221,7 @@
         <div class="empty"><h3><%= loadError ? 'Availability is temporarily unavailable.' : 'No homes match these dates yet.' %></h3><p><%= loadError ? 'Please try again shortly or contact Hive for current options.' : 'Inventory changes regularly. Share your dates, budget, and preferred apartment size and the Hive team can discuss upcoming availability in ' + market.name + '.' %></p><a class="button" href="/contact">Ask about <%= market.name %></a></div>
         <% } %>
       </div>
+      <% } %>
     </div>
   </section>
 
