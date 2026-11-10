@@ -71,6 +71,9 @@
     .data-table tbody tr.has-unread { background: #fdf8ec; }
     .reply-badge { display: inline-block; margin-top: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--white); background: var(--accent); border-radius: 999px; white-space: nowrap; }
     .reply-badge:empty { display: none; }
+    /* Row came from the general contact form, not the apply form. */
+    .source-badge { display: inline-block; margin-top: 4px; margin-right: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--muted); background: #f1efea; border: 1px solid #e0ddd7; border-radius: 999px; white-space: nowrap; }
+    .app-subject { font-weight: 500; color: var(--ink); }
 
     /* Application detail + reply popup */
     .app-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(26,26,24,0.7); align-items: center; justify-content: center; padding: 24px; }
@@ -80,6 +83,7 @@
     .app-modal-head h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; line-height: 1.2; }
     .app-modal-meta { margin-top: 4px; font-size: 13px; color: var(--muted); line-height: 1.6; }
     .app-modal-meta a { color: var(--accent-dark); }
+    .app-modal-source { display: inline-block; padding: 1px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--muted); background: #f1efea; border: 1px solid #e0ddd7; border-radius: 999px; }
     .app-close { background: none; border: none; cursor: pointer; font-size: 26px; line-height: 1; color: var(--muted); padding: 0 2px; }
     .app-close:hover { color: var(--ink); }
     .app-modal-body { flex: 1; overflow: auto; padding: 18px 20px; background: #faf9f6; }
@@ -160,15 +164,22 @@
             <tr data-app-id="<%= app.id %>" class="<%= app.unread_count > 0 ? 'has-unread' : '' %><%= !app.opened_at ? ' is-unopened' : '' %>">
               <td class="app-name">
                 <div><%= app.full_name %></div>
-                <span class="new-badge"><% if (!app.opened_at) { %>New<% } %></span><span class="reply-badge"><% if (app.unread_count > 0) { %><%= app.unread_count %> new <%= app.unread_count === 1 ? 'reply' : 'replies' %><% } %></span>
+                <span class="new-badge"><% if (!app.opened_at) { %>New<% } %></span><% if (app.source === 'contact') { %><span class="source-badge">Contact form</span><% } %><span class="reply-badge"><% if (app.unread_count > 0) { %><%= app.unread_count %> new <%= app.unread_count === 1 ? 'reply' : 'replies' %><% } %></span>
               </td>
               <td>
                 <div><%= app.email %></div>
                 <% if (app.phone) { %><div class="app-email"><%= app.phone %></div><% } %>
               </td>
               <td>
-                <div><span class="waitlist-badge">Waitlist</span></div>
-                <% if (app.property || app.move_in || app.move_out) { %>
+                <% if (app.source === 'contact') { %>
+                  <% if (app.subject) { %>
+                    <div class="app-subject"><%= app.subject %></div>
+                  <% } %>
+                  <div class="app-email">Contact form message</div>
+                <% } else { %>
+                  <div><span class="waitlist-badge">Waitlist</span></div>
+                <% } %>
+                <% if (app.source !== 'contact' && (app.property || app.move_in || app.move_out)) { %>
                   <% if (app.listing_url) { %>
                     <div><a class="app-property" href="<%= app.listing_url %>" target="_blank" rel="noopener" title="<%= app.listing_title || '' %>"><%= app.property || app.listing_title %></a></div>
                   <% } else if (app.property) { %>
@@ -220,7 +231,7 @@
         <button type="button" class="app-close" id="app-close" aria-label="Close">&times;</button>
       </div>
       <div class="app-modal-body">
-        <div class="app-section-label">About</div>
+        <div class="app-section-label" id="app-about-label">About</div>
         <div class="app-modal-about" id="app-modal-about"></div>
         <div class="app-section-label">Conversation</div>
         <div class="app-thread" id="app-thread"><div class="app-thread-empty">Loading…</div></div>
@@ -248,6 +259,7 @@
       var titleEl = document.getElementById('app-modal-title');
       var metaEl = document.getElementById('app-modal-meta');
       var aboutEl = document.getElementById('app-modal-about');
+      var aboutLabelEl = document.getElementById('app-about-label');
       var threadEl = document.getElementById('app-thread');
       var form = document.getElementById('app-reply-form');
       var box = document.getElementById('app-reply-box');
@@ -312,6 +324,7 @@
       function openApp(id) {
         currentId = id;
         titleEl.textContent = 'Application';
+        aboutLabelEl.textContent = 'About';
         metaEl.textContent = '';
         aboutEl.textContent = '';
         threadEl.innerHTML = '<div class="app-thread-empty">Loading…</div>';
@@ -330,12 +343,16 @@
             var a = data.application;
             currentName = a.full_name || '';
             titleEl.textContent = a.full_name;
+            var isContact = a.source === 'contact';
+            aboutLabelEl.textContent = isContact ? 'Message' : 'About';
             var bits = [];
             bits.push('<a href="mailto:' + esc(a.email) + '">' + esc(a.email) + '</a>' + (a.phone ? ' · ' + esc(a.phone) : ''));
-            if (a.property || a.move_in || a.move_out) {
+            if (isContact) {
+              bits.push('<span class="app-modal-source">Contact form</span>' + (a.subject ? ' · ' + esc(a.subject) : ''));
+            } else if (a.property || a.move_in || a.move_out) {
               bits.push(esc(a.property || '') + ((a.move_in || a.move_out) ? (a.property ? ' · ' : '') + esc(fmtStay(a.move_in)) + ' \u2192 ' + esc(fmtStay(a.move_out)) : ''));
             }
-            bits.push('Joined the waitlist ' + esc(fmtDate(a.created_at)));
+            bits.push((isContact ? 'Sent ' : 'Joined the waitlist ') + esc(fmtDate(a.created_at)));
             metaEl.innerHTML = bits.join('<br>');
             aboutEl.textContent = a.about || '';
             renderThread(data.messages);

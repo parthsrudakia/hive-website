@@ -1203,34 +1203,23 @@ router.post('/contact', contactLimiter, async (req, res) => {
     return res.status(400).render('public/contact', { success: false, error });
   }
 
-  // Content check (utils/spamCheck). Contact messages aren't stored, so a
-  // flagged one is still emailed, with the subject tagged, but gets no
-  // confirmation email.
+  // Content check (utils/spamCheck). A flagged message is still saved for
+  // review but gets no confirmation email.
   const spamReason = checkSpam(req.body);
   if (spamReason) {
-    console.warn(`[spamCheck] Tagged /contact submission as possible spam (${spamReason}) from ${req.ip}`);
+    console.warn(`[spamCheck] Flagged /contact submission as possible spam (${spamReason}) from ${req.ip}`);
   }
 
-  // Notify the master inbox with the submitted details (best-effort)
+  // Contact messages are reviewed and replied to on the admin Applications tab
+  // (flagged there as coming from the contact form), so no inbox notification.
   try {
-    await sendMail({
-      to: NOTIFY_EMAIL,
-      replyTo: email,
-      subject: `${spamReason ? '[Possible spam] ' : ''}New Contact Message: ${subject || full_name}`,
-      html: `
-      <h2>New Contact Message</h2>
-      <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-        <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; width: 160px;">Name</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${full_name}</td></tr>
-        <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${email}</td></tr>
-        <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Phone</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${phone || 'Not provided'}</td></tr>
-        <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Subject</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${subject || 'Not provided'}</td></tr>
-        <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Message</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${message}</td></tr>
-      </table>
-      <p style="margin-top: 20px; color: #888; font-size: 12px;">Submitted via Hive Contact Form</p>
-    `
-    });
-  } catch (mailErr) {
-    console.error('[mail] Failed to send contact notification:', mailErr.message);
+    await pool.query(
+      `INSERT INTO applications (full_name, email, phone, about, subject, source)
+       VALUES ($1, $2, $3, $4, $5, 'contact')`,
+      [full_name, email, phone || null, message, subject || null]
+    );
+  } catch (dbErr) {
+    console.error('[contact] Failed to save message:', dbErr.message);
   }
 
   // Send a confirmation to the sender (best-effort). Not for a flagged message.

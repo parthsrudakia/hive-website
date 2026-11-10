@@ -594,7 +594,7 @@ function escapeHtml(s) {
 router.get('/applications/:id/messages', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, full_name, email, phone, about, social_media, property, move_in, move_out, listing_id, created_at FROM applications WHERE id = $1',
+      'SELECT id, full_name, email, phone, about, social_media, property, move_in, move_out, listing_id, source, subject, created_at FROM applications WHERE id = $1',
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ ok: false, error: 'Application not found' });

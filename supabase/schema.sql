@@ -66,13 +66,19 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 
 -- Applications ------------------------------------------------
+-- Holds both /apply inquiries and general /contact messages; `source` says which.
 CREATE TABLE IF NOT EXISTS applications (
   id           SERIAL PRIMARY KEY,
   full_name    VARCHAR(200) NOT NULL,
   email        VARCHAR(200) NOT NULL,
   phone        VARCHAR(50),
+  -- The applicant's "about you" text, or the contact form's message
   about        TEXT,
   social_media TEXT,
+  -- Which form the row came from: 'application' | 'contact'
+  source       VARCHAR(20) NOT NULL DEFAULT 'application',
+  -- Contact form only: the subject line the sender chose
+  subject      VARCHAR(300),
   -- Booking context carried over from a listing's "Book Now" button (optional)
   property     VARCHAR(300),
   move_in      DATE,

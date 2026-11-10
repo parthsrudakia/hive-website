@@ -141,6 +141,11 @@ app.use(session({
       // Soft delete: Delete / Clear All hide rows; a late applicant reply restores
       // them; rows hidden for over a year are purged when the tab is opened.
       `ALTER TABLE applications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      // General /contact messages land in the Applications tab too. `source`
+      // says which form a row came from ('application' | 'contact') and
+      // `subject` holds the contact form's subject line.
+      `ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'application'`,
+      `ALTER TABLE applications ADD COLUMN IF NOT EXISTS subject VARCHAR(300)`,
       // When the admin first opened the application popup (NULL = never opened,
       // shown as "New"). Backfilled once, when the column is first added, so
       // rows from before this shipped count as already opened.
