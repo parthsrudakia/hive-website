@@ -851,18 +851,26 @@ router.post('/paid-applications/:id/delete', requireAdmin, async (req, res) => {
 });
 
 // --- Landlord Inquiries Tab ---
+// Rows flagged as spam (see utils/spamCheck) are hidden unless ?spam=1, and
+// never count toward the header total or "New" markers.
 router.get('/landlord-inquiries', requireAdmin, async (req, res) => {
+  const showSpam = req.query.spam === '1';
   try {
     const { rows: inquiries } = await pool.query(
-      'SELECT * FROM landlord_inquiries ORDER BY created_at DESC'
+      `SELECT * FROM landlord_inquiries ${showSpam ? '' : 'WHERE NOT is_spam '}ORDER BY created_at DESC`
+    );
+    const { rows: spam } = await pool.query(
+      'SELECT COUNT(*)::int AS count FROM landlord_inquiries WHERE is_spam'
     );
     res.render('admin/landlord-inquiries', {
       inquiries,
+      showSpam,
+      spamCount: spam[0].count,
       adminName: req.session.adminName
     });
   } catch (err) {
     console.error('Landlord inquiries error:', err);
-    res.render('admin/landlord-inquiries', { inquiries: [], adminName: req.session.adminName });
+    res.render('admin/landlord-inquiries', { inquiries: [], showSpam, spamCount: 0, adminName: req.session.adminName });
   }
 });
 

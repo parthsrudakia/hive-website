@@ -8,6 +8,7 @@ const pool = require('../db/pool');
 const { parseSocialLink } = require('../utils/socialLink');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { mintFormToken, checkFormGuards, turnstileEnabled } = require('../utils/formGuard');
+const { checkSpam } = require('../utils/spamCheck');
 const { getGoogleReviews } = require('../utils/googleReviews');
 const { storePrivateFile } = require('../utils/storage');
 const { rewriteListingImages, proxyImage } = require('../utils/imageProxy');
@@ -1067,19 +1068,29 @@ router.post('/partners/apply', landlordLimiter, async (req, res) => {
       return res.status(400).render('public/landlord-apply', { success: false, error });
     }
 
+    // Content check (utils/spamCheck). A flagged inquiry is still saved and the
+    // team still gets the email, tagged in the subject, so a false positive is
+    // never lost. It gets no confirmation email and is hidden in the admin until
+    // the Spam toggle is on.
+    const spamReason = checkSpam(req.body);
+
     // Save to database
     await pool.query(
-      `INSERT INTO landlord_inquiries (full_name, email, phone, property_location, num_units, property_type, message, referral_source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [full_name, email, phone || null, property_location, num_units || null, property_type || null, message, referral_source || null]
+      `INSERT INTO landlord_inquiries (full_name, email, phone, property_location, num_units, property_type, message, referral_source, is_spam, spam_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [full_name, email, phone || null, property_location, num_units || null, property_type || null, message, referral_source || null, !!spamReason, spamReason]
     );
+
+    if (spamReason) {
+      console.warn(`[spamCheck] Tagged /partners/apply submission as possible spam (${spamReason}) from ${req.ip}`);
+    }
 
     // Notify the master inbox with the submitted details (best-effort — already saved)
     try {
       await sendMail({
         to: NOTIFY_EMAIL,
         replyTo: email,
-        subject: `New Landlord Inquiry: ${full_name}`,
+        subject: `${spamReason ? '[Possible spam] ' : ''}New Landlord Inquiry: ${full_name}`,
         html: `
         <h2>New Landlord Inquiry</h2>
         <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
@@ -1099,18 +1110,21 @@ router.post('/partners/apply', landlordLimiter, async (req, res) => {
       console.error('[mail] Failed to send landlord inquiry notification:', mailErr.message);
     }
 
-    // Send a confirmation to the landlord (best-effort)
-    try {
-      await sendMail({
-        to: email,
-        subject: 'Thanks for your interest in partnering with Hive',
-        html: confirmationHtml(`Thank you, ${full_name}!`, [
-          'We have received your inquiry about partnering with Hive and our team will be in touch soon.',
-          'We will review the details you shared about your property and follow up with next steps.'
-        ])
-      });
-    } catch (mailErr) {
-      console.error('[mail] Failed to send landlord confirmation:', mailErr.message);
+    // Send a confirmation to the landlord (best-effort). Not for a flagged
+    // inquiry, so the domain doesn't mail spammers.
+    if (!spamReason) {
+      try {
+        await sendMail({
+          to: email,
+          subject: 'Thanks for your interest in partnering with Hive',
+          html: confirmationHtml(`Thank you, ${full_name}!`, [
+            'We have received your inquiry about partnering with Hive and our team will be in touch soon.',
+            'We will review the details you shared about your property and follow up with next steps.'
+          ])
+        });
+      } catch (mailErr) {
+        console.error('[mail] Failed to send landlord confirmation:', mailErr.message);
+      }
     }
 
     res.render('public/landlord-apply', { success: true });
@@ -1180,12 +1194,20 @@ router.post('/contact', contactLimiter, async (req, res) => {
     return res.status(400).render('public/contact', { success: false, error });
   }
 
+  // Content check (utils/spamCheck). Contact messages aren't stored, so a
+  // flagged one is still emailed, with the subject tagged, but gets no
+  // confirmation email.
+  const spamReason = checkSpam(req.body);
+  if (spamReason) {
+    console.warn(`[spamCheck] Tagged /contact submission as possible spam (${spamReason}) from ${req.ip}`);
+  }
+
   // Notify the master inbox with the submitted details (best-effort)
   try {
     await sendMail({
       to: NOTIFY_EMAIL,
       replyTo: email,
-      subject: `New Contact Message: ${subject || full_name}`,
+      subject: `${spamReason ? '[Possible spam] ' : ''}New Contact Message: ${subject || full_name}`,
       html: `
       <h2>New Contact Message</h2>
       <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
@@ -1202,18 +1224,20 @@ router.post('/contact', contactLimiter, async (req, res) => {
     console.error('[mail] Failed to send contact notification:', mailErr.message);
   }
 
-  // Send a confirmation to the sender (best-effort)
-  try {
-    await sendMail({
-      to: email,
-      subject: 'We received your message',
-      html: confirmationHtml(`Thanks for reaching out, ${full_name}!`, [
-        'We have received your message and our team will get back to you shortly.',
-        'If your enquiry is time-sensitive, feel free to reply directly to this email.'
-      ])
-    });
-  } catch (mailErr) {
-    console.error('[mail] Failed to send contact confirmation:', mailErr.message);
+  // Send a confirmation to the sender (best-effort). Not for a flagged message.
+  if (!spamReason) {
+    try {
+      await sendMail({
+        to: email,
+        subject: 'We received your message',
+        html: confirmationHtml(`Thanks for reaching out, ${full_name}!`, [
+          'We have received your message and our team will get back to you shortly.',
+          'If your enquiry is time-sensitive, feel free to reply directly to this email.'
+        ])
+      });
+    } catch (mailErr) {
+      console.error('[mail] Failed to send contact confirmation:', mailErr.message);
+    }
   }
 
   res.render('public/contact', { success: true });
