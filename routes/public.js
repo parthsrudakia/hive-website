@@ -419,7 +419,8 @@ router.get('/short-term-rentals/:slug', async (req, res, next) => {
     }
     query += ` ORDER BY sort_order ASC, created_at DESC`;
 
-    const { rows: listings } = await pool.query(query, params);
+    // A coming-soon market (utils/markets.js) shows a waitlist panel, not listings.
+    const { rows: listings } = market.comingSoon ? { rows: [] } : await pool.query(query, params);
     listings.forEach(rewriteListingImages);
     const canonicalPath = marketPath(market);
     const seo = buildSeo(req, {
@@ -504,7 +505,9 @@ router.get('/properties', async (req, res) => {
     }
     query += ` ORDER BY sort_order ASC, created_at DESC`;
 
-    const { rows: listings } = await pool.query(query, params);
+    // A coming-soon market (utils/markets.js) shows a waitlist panel, not listings.
+    const comingSoonMarket = recognizedMarket && recognizedMarket.comingSoon ? recognizedMarket : null;
+    const { rows: listings } = comingSoonMarket ? { rows: [] } : await pool.query(query, params);
     // Convert deprecated Drive uc?export URLs to thumbnail format
     listings.forEach(l => { if (l.images) l.images = l.images.map(url => {
       const m = url && url.match(/drive\.google\.com\/(?:uc\?export=view&id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/);
@@ -528,7 +531,7 @@ router.get('/properties', async (req, res) => {
         listingsSchema(listings, req.app.locals.publicTitle)
       ]
     });
-    res.render('public/properties', { listings, filters, seo });
+    res.render('public/properties', { listings, filters, seo, comingSoonMarket });
   } catch (err) {
     console.error('Error loading properties:', err);
     res.render('public/properties', { listings: [], filters: { location: '', bedrooms: '', price: '', movein: '', moveout: '' }, seo: buildSeo(req) });
@@ -562,14 +565,6 @@ router.get('/properties/:id', async (req, res) => {
     }
 
     const listing = rows[0];
-
-    // Fetch bookings for this listing (current and future only)
-    const { rows: bookings } = await pool.query(
-      `SELECT check_in, check_out FROM bookings
-       WHERE listing_id = $1 AND check_out >= CURRENT_DATE
-       ORDER BY check_in ASC`,
-      [id]
-    );
 
     // Fetch related listings (same neighborhood or city, excluding current)
     const { rows: relatedListings } = await pool.query(
@@ -612,7 +607,7 @@ router.get('/properties/:id', async (req, res) => {
         listingSchema(listing, publicName)
       ]
     });
-    res.render('public/listing-detail', { listing, relatedListings, bookings, seo });
+    res.render('public/listing-detail', { listing, relatedListings, seo });
   } catch (err) {
     console.error('Error loading listing detail:', err);
     res.redirect('/properties');
@@ -641,7 +636,18 @@ router.get('/partners', async (req, res) => {
   res.render('public/partners', { seo });
 });
 
-// Apply page
+// Waitlist sign-up (was the booking inquiry form). The listings are not open
+// yet, so every entry is a waitlist request; it is stored in applications and
+// shown in the admin Applications tab, labeled Waitlist.
+const WAITLIST_MESSAGE = "This home isn't open right now. You're on the waitlist, and we'll reach out when a room that fits your dates opens up.";
+
+// A sign-up from a coming-soon city's panel (no listing; property is the city
+// name, see views/partials/coming-soon.ejs) gets a message about that city.
+function comingSoonWaitlistCity(property, listingId) {
+  const market = listingId ? null : marketForName(property);
+  return market && market.comingSoon ? market.name : null;
+}
+
 router.get('/apply', (req, res) => {
   res.render('public/apply', {
     success: false,
@@ -699,7 +705,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
       });
     }
 
-    // Save to database, including any booking context from a listing's "Book Now" button
+    // Save to database, including the listing and dates from a listing's "Join the waitlist" button
     const listingId = /^\d+$/.test(String(req.body.listing_id || '')) ? parseInt(req.body.listing_id, 10) : null;
     await pool.query(
       `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out, listing_id)
@@ -710,22 +716,25 @@ router.post('/apply', applyLimiter, async (req, res) => {
     // No inbox notification for tenant applications: the admin Applications tab
     // is where they are reviewed and replied to.
 
-    // Send a confirmation to the applicant (best-effort)
+    const city = comingSoonWaitlistCity(property, listingId);
+    const message = city
+      ? `Thanks, you're on the ${city} waitlist. We'll reach out when a room that fits your dates opens up.`
+      : WAITLIST_MESSAGE;
+
+    // Send a confirmation to the person who joined the waitlist (best-effort)
     try {
       await sendMail({
         to: email,
-        subject: 'We received your Hive application',
-        html: confirmationHtml(`Thanks for applying, ${full_name}!`, [
-          'We have received your application and our team will review it shortly.',
-          'If your profile is a good fit, we will reach out with available homes and next steps.',
-          'In the meantime, feel free to browse our latest listings at <a href="https://hiveny.com/properties" style="color: #d4920b;">hiveny.com/properties</a>.'
+        subject: "You're on the Hive waitlist",
+        html: confirmationHtml(city ? `Hi ${full_name},` : `Thanks, ${full_name}!`, [
+          message
         ])
       });
     } catch (mailErr) {
-      console.error('[mail] Failed to send applicant confirmation:', mailErr.message);
+      console.error('[mail] Failed to send waitlist confirmation:', mailErr.message);
     }
 
-    res.render('public/apply', { success: true });
+    res.render('public/apply', { success: true, successMessage: message });
   } catch (err) {
     console.error('Application submission error:', err);
     // Still show success if DB saved but email failed

@@ -41,6 +41,9 @@ const MARKET_PAGES = {
     shortName: 'Jersey City',
     state: 'NJ',
     matchNames: ['jersey city'],
+    // No Jersey City homes yet: its market page and the /properties filter show a
+    // "Coming soon" waitlist panel instead of listings. Remove once rooms are listed.
+    comingSoon: true,
     title: 'Short-Term Furnished Rentals in Jersey City | Hive',
     description: 'Explore short-term furnished rentals in Jersey City for stays of 30 days or longer. Find move-in ready apartments with flexible terms near New York City.',
     eyebrow: '30+ day stays in Jersey City',

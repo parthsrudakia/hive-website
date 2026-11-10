@@ -994,23 +994,6 @@ span.flatpickr-weekday {
   transition: background 0.3s;
   margin-bottom: 10px;
 }
-.inquiry-btn-tour {
-  display: block;
-  width: 100%;
-  padding: 14px 24px;
-  font-family: var(--sans);
-  font-size: 0.88rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-align: center;
-  background: transparent;
-  color: var(--ink);
-  text-decoration: none;
-  border: 1px solid var(--ink);
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-bottom: 16px;
-}
 .inquiry-note {
   font-size: 0.78rem;
   font-weight: 400;
@@ -1018,69 +1001,12 @@ span.flatpickr-weekday {
   text-align: center;
 }
 
-/* Booked dates */
-.inquiry-availability {
-  margin-bottom: 20px;
-}
-.inquiry-availability-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-.booked-range {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--warm);
-}
-.booked-range:last-child {
-  border-bottom: none;
-}
-.booked-range-dates {
+/* Waitlist stay dates */
+.inquiry-dates-label {
   font-size: 0.82rem;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--ink);
-  letter-spacing: 0.01em;
-}
-.booked-range-tag {
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--stone);
-  padding: 3px 8px;
-  background: var(--cream);
-}
-.date-conflict-banner {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  background: var(--cream);
-  border-left: 2px solid var(--stone);
-}
-.date-conflict-banner.show {
-  display: flex;
-}
-.date-conflict-banner svg {
-  width: 14px;
-  height: 14px;
-  color: var(--stone);
-  flex-shrink: 0;
-}
-.date-conflict-banner span {
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--muted);
-  line-height: 1.4;
-}
-.inquiry-date-field input.date-conflict {
-  border-color: var(--stone);
+  margin-bottom: 10px;
 }
 
 /* ===== RELATED ===== */
@@ -1545,33 +1471,17 @@ span.flatpickr-weekday {
           <span class="price-suffix">/month</span>
         </div>
         <% if (listing.show_booking !== false) { %>
+        <div class="inquiry-dates-label">When would you like to move in?</div>
         <div class="inquiry-dates-row">
           <div class="inquiry-date-field">
             <label for="move-in">Move In</label>
-            <input type="date" id="move-in" value="<%= listing.available_from ? new Date(listing.available_from).toISOString().split('T')[0] : '' %>">
+            <input type="date" id="move-in" placeholder="Optional">
           </div>
           <div class="inquiry-date-field">
             <label for="move-out">Move Out</label>
-            <input type="date" id="move-out" value="<%= listing.available_to ? new Date(listing.available_to).toISOString().split('T')[0] : '' %>">
+            <input type="date" id="move-out" placeholder="Optional">
           </div>
         </div>
-
-        <div class="date-conflict-banner" id="date-conflict-banner">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          <span>These dates overlap with a booking. Try adjusting your move-in or move-out date.</span>
-        </div>
-
-        <% if (bookings && bookings.length > 0) { %>
-        <div class="inquiry-availability">
-          <div class="inquiry-availability-label">Unavailable</div>
-          <% bookings.forEach(function(b) { %>
-          <div class="booked-range">
-            <span class="booked-range-dates"><%= new Date(b.check_in).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) %> &mdash; <%= new Date(b.check_out).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) %></span>
-            <span class="booked-range-tag">Booked</span>
-          </div>
-          <% }); %>
-        </div>
-        <% } %>
 
         <div class="inquiry-price-summary">
           <span class="inquiry-price-label">Monthly rent</span>
@@ -1581,8 +1491,7 @@ span.flatpickr-weekday {
         <% if (listing.min_stay) { %>
         <p class="inquiry-minstay">Minimum stay: <%= listing.min_stay %> days</p>
         <% } %>
-        <a href="/apply" class="inquiry-btn" id="book-now-btn" data-property="<%= publicTitle(listing) %>" data-listing="<%= listing.id %>">Book Now</a>
-        <a href="/apply" class="inquiry-btn-tour">Schedule a Tour</a>
+        <a href="/apply" class="inquiry-btn" id="waitlist-btn" data-property="<%= publicTitle(listing) %>" data-listing="<%= listing.id %>">Join the waitlist</a>
         <p class="inquiry-note">No broker fees &middot; Fully furnished &middot; Flexible terms</p>
         <% } %>
       </div>
@@ -1824,11 +1733,9 @@ if (mobileBtn) {
   });
 }
 
-// Booked date validation + Flatpickr calendar
-var bookedRanges = <%- JSON.stringify((bookings || []).map(function(b) { return { check_in: b.check_in, check_out: b.check_out }; })) %>;
+// Optional stay dates for the waitlist + Flatpickr calendar
 var moveInInput = document.getElementById('move-in');
 var moveOutInput = document.getElementById('move-out');
-var conflictBanner = document.getElementById('date-conflict-banner');
 
 // Pre-fill the stay dates from the URL (carried over from the search page).
 (function() {
@@ -1838,9 +1745,9 @@ var conflictBanner = document.getElementById('date-conflict-banner');
   if (mo && moveOutInput) moveOutInput.value = mo;
 })();
 
-// Keep the "Book Now" link carrying the property + currently chosen stay dates.
-function updateBookNow() {
-  var btn = document.getElementById('book-now-btn');
+// Keep the "Join the waitlist" link carrying the property + currently chosen stay dates.
+function updateWaitlistLink() {
+  var btn = document.getElementById('waitlist-btn');
   if (!btn) return;
   var params = [
     'property=' + encodeURIComponent(btn.dataset.property || ''),
@@ -1850,56 +1757,6 @@ function updateBookNow() {
   if (moveOutInput && moveOutInput.value) params.push('moveout=' + encodeURIComponent(moveOutInput.value));
   btn.setAttribute('href', '/apply?' + params.join('&'));
 }
-
-function parseDate(str) {
-  if (!str) return null;
-  var parts = str.split('T')[0].split('-');
-  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-}
-
-function datesOverlap(startA, endA, startB, endB) {
-  return startA < endB && endA > startB;
-}
-
-function checkDateConflict() {
-  if (!moveInInput || !moveOutInput || !conflictBanner) return;
-  var moveIn = moveInInput.value ? parseDate(moveInInput.value) : null;
-  var moveOut = moveOutInput.value ? parseDate(moveOutInput.value) : null;
-  if (!moveIn || !moveOut || bookedRanges.length === 0) {
-    conflictBanner.classList.remove('show');
-    moveInInput.classList.remove('date-conflict');
-    moveOutInput.classList.remove('date-conflict');
-    return;
-  }
-  var hasConflict = false;
-  for (var i = 0; i < bookedRanges.length; i++) {
-    var bStart = parseDate(bookedRanges[i].check_in);
-    var bEnd = parseDate(bookedRanges[i].check_out);
-    if (datesOverlap(moveIn, moveOut, bStart, bEnd)) {
-      hasConflict = true;
-      break;
-    }
-  }
-  if (hasConflict) {
-    conflictBanner.classList.add('show');
-    moveInInput.classList.add('date-conflict');
-    moveOutInput.classList.add('date-conflict');
-  } else {
-    conflictBanner.classList.remove('show');
-    moveInInput.classList.remove('date-conflict');
-    moveOutInput.classList.remove('date-conflict');
-  }
-}
-
-// Build disabled date ranges for flatpickr
-var disabledRanges = [];
-bookedRanges.forEach(function(b) {
-  var from = b.check_in ? b.check_in.split('T')[0] : null;
-  var to = b.check_out ? b.check_out.split('T')[0] : null;
-  if (from && to) {
-    disabledRanges.push({ from: from, to: to });
-  }
-});
 
 // Minimum stay is 30 days: move-out must be at least 30 days after move-in.
 var MIN_STAY_DAYS = 30;
@@ -1924,28 +1781,23 @@ function enforceMinStay() {
 if (moveInInput && typeof flatpickr !== 'undefined') {
   moveInPicker = flatpickr(moveInInput, {
     dateFormat: 'Y-m-d',
-    disable: disabledRanges,
     minDate: 'today',
     defaultDate: moveInInput.value || null,
-    onChange: function() { enforceMinStay(); checkDateConflict(); updateBookNow(); }
+    onChange: function() { enforceMinStay(); updateWaitlistLink(); }
   });
 }
 if (moveOutInput && typeof flatpickr !== 'undefined') {
   moveOutPicker = flatpickr(moveOutInput, {
     dateFormat: 'Y-m-d',
-    disable: disabledRanges,
     minDate: 'today',
     defaultDate: moveOutInput.value || null,
-    onChange: function() { checkDateConflict(); updateBookNow(); }
+    onChange: function() { updateWaitlistLink(); }
   });
 }
 
 // Apply the 30-day floor on load (covers dates carried over from search).
 enforceMinStay();
-if (moveInInput && moveOutInput) {
-  checkDateConflict();
-}
-updateBookNow();
+updateWaitlistLink();
 </script>
 </body>
 </html>

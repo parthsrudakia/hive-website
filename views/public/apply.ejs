@@ -187,6 +187,9 @@ body {
 .apply-booking-value {
   font-family: var(--serif); font-size: 1.15rem; color: var(--ink); line-height: 1.3;
 }
+.apply-booking-question {
+  font-size: 0.92rem; font-weight: 500; color: var(--ink);
+}
 .apply-booking-dates {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -424,9 +427,9 @@ body {
 <!-- PAGE HEADER -->
 <section class="page-header">
   <div class="container">
-    <div class="section-tag">Apply</div>
-    <h1>Start Your <em>Application.</em></h1>
-    <p>Tell us a little about yourself and we'll be in touch shortly to get you set up in your new home.</p>
+    <div class="section-tag">Waitlist</div>
+    <h1>Join the <em>Waitlist.</em></h1>
+    <p>Tell us a little about yourself and when you'd like to move in, and we'll reach out when a room that fits your dates opens up.</p>
   </div>
 </section>
 
@@ -436,13 +439,13 @@ body {
     <div class="apply-inner">
       <% if (typeof success !== 'undefined' && success) { %>
       <div class="apply-success">
-        <h2>Application <em>Received.</em></h2>
-        <p>Thank you for your interest in Hive. We'll review your application and get back to you shortly.</p>
+        <h2>You're on the <em>Waitlist.</em></h2>
+        <p><%= locals.successMessage || "This home isn't open right now. You're on the waitlist, and we'll reach out when a room that fits your dates opens up." %></p>
         <a href="/properties">Browse Properties <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg></a>
       </div>
       <% } else { %>
       <h2>Tell Us About <em>Yourself.</em></h2>
-      <p class="apply-intro">Fill out the form below and our team will reach out to help you find the perfect home.</p>
+      <p class="apply-intro">Fill out the form below to join the waitlist.</p>
       <% if (typeof error !== 'undefined' && error) { %>
       <div class="form-error"><%= error %></div>
       <% } %>
@@ -461,6 +464,7 @@ body {
             <span class="apply-booking-value"><%= prefill.property %></span>
           </div>
           <% } %>
+          <span class="apply-booking-question">When would you like to move in?</span>
           <div class="apply-booking-dates">
             <div class="apply-booking-field">
               <label for="move_in">Move In</label>
@@ -502,7 +506,7 @@ body {
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         <% } %>
         <button type="submit" class="apply-submit">
-          Submit Application
+          Join the waitlist
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
         </button>
       </form>
@@ -596,7 +600,7 @@ function enforceMinStay() {
 }
 if (moveInField && moveOutField) {
   moveInField.addEventListener('change', enforceMinStay);
-  // Apply the 30-day floor on load (covers dates carried over from Book Now).
+  // Apply the 30-day floor on load (covers dates carried over from the listing page).
   enforceMinStay();
 }
 </script>
