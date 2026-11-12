@@ -5,11 +5,22 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["views/**", "public/**", "routes/**", "db/**", "middleware/**", "utils/**"]
+        "includeFiles": ["views/**", "routes/**", "db/**", "middleware/**", "utils/**"]
       }
-    }
+    },
+    { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
+    {
+      "src": "/images/(.*)",
+      "headers": { "Cache-Control": "public, max-age=86400, s-maxage=31536000" },
+      "dest": "/public/images/$1"
+    },
+    {
+      "src": "/favicon\\.svg",
+      "headers": { "Cache-Control": "public, max-age=86400, s-maxage=31536000" },
+      "dest": "/public/favicon.svg"
+    },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

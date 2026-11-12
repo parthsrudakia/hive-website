@@ -40,7 +40,9 @@ app.use('/webhooks', require('./routes/resendWebhook'));
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// On Vercel, /images and /favicon.svg are served by the CDN (see vercel.json)
+// and never reach this function; this covers local dev and Railway.
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1d' }));
 
 // Sessions
 app.use(session({
@@ -201,9 +203,21 @@ app.use(session({
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR(64)`,
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`
     ];
+    // Every cold start used to re-run all ~50 statements. Instead, record a
+    // hash of the migration list and skip when the database already has it,
+    // so a warm schema costs two cheap queries per cold start.
+    const hash = require('crypto').createHash('sha256').update(migrations.join('\n')).digest('hex');
+    await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations_hash (id INTEGER PRIMARY KEY, hash VARCHAR(64) NOT NULL, applied_at TIMESTAMP DEFAULT NOW())`);
+    const { rows } = await pool.query('SELECT hash FROM schema_migrations_hash WHERE id = 1');
+    if (rows[0] && rows[0].hash === hash) return;
     for (const sql of migrations) {
       await pool.query(sql);
     }
+    await pool.query(
+      `INSERT INTO schema_migrations_hash (id, hash) VALUES (1, $1)
+       ON CONFLICT (id) DO UPDATE SET hash = EXCLUDED.hash, applied_at = NOW()`,
+      [hash]
+    );
     console.log('Database migrations applied.');
   } catch (err) {
     console.error('Migration warning:', err.message);

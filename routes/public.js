@@ -321,7 +321,16 @@ router.use(async (req, res, next) => {
   next();
 });
 
-router.get('/', async (req, res) => {
+// CDN-cache pages that have no per-visitor content (no form token, no session).
+// Vercel's edge serves repeat views for 5 minutes without invoking the
+// function, then revalidates in the background. Admin edits show up within
+// about 5 minutes. Error paths override this with no-store.
+function edgeCache(req, res, next) {
+  res.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+  next();
+}
+
+router.get('/', edgeCache, async (req, res) => {
   try {
     // One listing per property: rooms in the same unit share title + city, so
     // DISTINCT ON (title, city) keeps a single room per property in featuring.
@@ -364,6 +373,7 @@ router.get('/', async (req, res) => {
     res.render('public/index', { featuredListings: listings, googleReviews, seo });
   } catch (err) {
     console.error('Error loading homepage:', err);
+    res.set('Cache-Control', 'no-store');
     res.render('public/index', {
       featuredListings: [],
       googleReviews: { reviews: [], rating: 0, totalReviews: 0 },
@@ -538,7 +548,7 @@ router.get('/properties', async (req, res) => {
   }
 });
 
-router.get('/properties/:id', async (req, res) => {
+router.get('/properties/:id', edgeCache, async (req, res) => {
   try {
     const { id } = req.params;
     if (!/^\d+$/.test(id)) {
@@ -610,6 +620,7 @@ router.get('/properties/:id', async (req, res) => {
     res.render('public/listing-detail', { listing, relatedListings, seo });
   } catch (err) {
     console.error('Error loading listing detail:', err);
+    res.set('Cache-Control', 'no-store');
     res.redirect('/properties');
   }
 });
@@ -618,7 +629,7 @@ router.get('/properties/:id', async (req, res) => {
 router.get('/properties.html', (req, res) => res.redirect(301, '/properties'));
 router.get('/partners.html', (req, res) => res.redirect(301, '/partners'));
 
-router.get('/partners', async (req, res) => {
+router.get('/partners', edgeCache, async (req, res) => {
   const seo = buildSeo(req, {
     pageType: 'WebPage',
     structuredData: [
@@ -1145,7 +1156,7 @@ router.post('/partners/apply', landlordLimiter, async (req, res) => {
 });
 
 // FAQ — static page of common questions
-router.get('/faq', (req, res) => {
+router.get('/faq', edgeCache, (req, res) => {
   const seo = buildSeo(req, {
     pageType: 'FAQPage',
     structuredData: [
@@ -1157,7 +1168,7 @@ router.get('/faq', (req, res) => {
 });
 router.get('/faqs', (req, res) => res.redirect(301, '/faq'));
 
-router.get('/privacy', (req, res) => {
+router.get('/privacy', edgeCache, (req, res) => {
   res.render('public/legal', {
     page: 'privacy',
     seo: buildSeo(req, {
@@ -1166,7 +1177,7 @@ router.get('/privacy', (req, res) => {
   });
 });
 
-router.get('/terms', (req, res) => {
+router.get('/terms', edgeCache, (req, res) => {
   res.render('public/legal', {
     page: 'terms',
     seo: buildSeo(req, {
