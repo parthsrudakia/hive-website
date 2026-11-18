@@ -1772,12 +1772,7 @@ body {
       <a class="fp-city-link active" href="/properties">All Cities</a>
       <a class="fp-city-link" href="/properties?location=New%20York">New York</a>
       <a class="fp-city-link" href="/properties?location=Jersey%20City">Jersey City</a>
-      <a class="fp-city-link" href="/properties?location=Los%20Angeles">Los Angeles</a>
-      <a class="fp-city-link" href="/properties?location=Chicago">Chicago</a>
-      <a class="fp-city-link" href="/properties?location=Miami">Miami</a>
-      <a class="fp-city-link" href="/properties?location=Washington%20DC">DC</a>
-      <a class="fp-city-link" href="/properties?location=San%20Francisco">San Francisco</a>
-      <a class="fp-city-link" href="/properties?location=Boston">Boston</a>
+      <a class="fp-city-link" href="/properties?location=Hoboken">Hoboken</a>
     </div>
     <div class="fp-grid reveal">
 <% featuredListings.forEach(function(listing) { %>
@@ -1809,9 +1804,14 @@ body {
       <% if (listing.available_from && listing.available_to) { %>
       <%= new Date(listing.available_from).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: '2-digit'}) %> – <%= new Date(listing.available_to).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: '2-digit'}) %> &nbsp;|&nbsp;
       <% } %>
+      <% if (listing.source === 'portal') { %>
+      $<%= listing.price_monthly.toLocaleString() %>/mo incl. services &nbsp;|&nbsp;
+      <%= roomFacts(listing).slice(0, 2).join(' · ') %>
+      <% } else { %>
       $<%= listing.price_monthly.toLocaleString() %>/mo &nbsp;|&nbsp;
       <%= listing.bedrooms === 0 ? 'Studio' : listing.bedrooms + ' BR' %> &nbsp;
       <%= parseFloat(listing.bathrooms) %> Bath
+      <% } %>
     </p>
   </div>
 </a>

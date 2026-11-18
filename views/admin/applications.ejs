@@ -55,7 +55,7 @@
     .app-property { color: var(--accent-dark); text-decoration: underline; text-decoration-color: rgba(0,0,0,0.25); text-underline-offset: 2px; }
     .app-property:hover { text-decoration-color: currentColor; }
     .app-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
-    /* Every /apply entry is a waitlist sign-up (the listings aren't open yet). */
+    /* An /apply entry: a waitlist sign-up, or a request for a room synced from the portal. */
     .waitlist-badge { display: inline-block; margin-bottom: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--accent-dark); background: #fdf3dc; border-radius: 999px; white-space: nowrap; }
 
     .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
@@ -177,7 +177,7 @@
                   <% } %>
                   <div class="app-email">Contact form message</div>
                 <% } else { %>
-                  <div><span class="waitlist-badge">Waitlist</span></div>
+                  <div><span class="waitlist-badge"><%= app.room_request ? 'Request' : 'Waitlist' %></span></div>
                 <% } %>
                 <% if (app.source !== 'contact' && (app.property || app.move_in || app.move_out)) { %>
                   <% if (app.listing_url) { %>
@@ -352,7 +352,7 @@
             } else if (a.property || a.move_in || a.move_out) {
               bits.push(esc(a.property || '') + ((a.move_in || a.move_out) ? (a.property ? ' · ' : '') + esc(fmtStay(a.move_in)) + ' \u2192 ' + esc(fmtStay(a.move_out)) : ''));
             }
-            bits.push((isContact ? 'Sent ' : 'Joined the waitlist ') + esc(fmtDate(a.created_at)));
+            bits.push((isContact ? 'Sent ' : a.room_request ? 'Requested this room ' : 'Joined the waitlist ') + esc(fmtDate(a.created_at)));
             metaEl.innerHTML = bits.join('<br>');
             aboutEl.textContent = a.about || '';
             renderThread(data.messages);
