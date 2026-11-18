@@ -251,7 +251,8 @@ const idUpload = multer({
 
 // Outbound mail helpers shared with the Stripe webhook handler.
 const { sendMail, confirmationHtml, NOTIFY_EMAIL } = require('../utils/mailer');
-const { finalizePaidApplication } = require('../utils/tenantApplication');
+const { finalizePaidApplication, sendAgreementsAfterPayment } = require('../utils/tenantApplication');
+const { cleanToken, fetchInvite, leaseDatesError, todayInNewYork } = require('../utils/portalApplications');
 
 // --- Form field validation ---------------------------------------------
 // Server-side mirror of the client-side pattern/minlength attributes, so the
@@ -760,11 +761,37 @@ router.post('/apply', applyLimiter, async (req, res) => {
 // which verifies payment, finalizes the application, and emails confirmations.
 // =====================================================================
 
-router.get('/apply-now', (req, res) => {
-  res.render('public/apply-now', {
+// Applications are by invitation: /apply-now?invite=TOKEN, where the token
+// comes from the portal's "Send application link". The portal says whether
+// it's still valid and which room it's for (no address or unit number).
+const INVITE_ONLY_MESSAGE = 'Applications are by invitation. Contact us to view a room.';
+const INVITE_CHECK_FAILED = "We couldn't check your invite right now. Please try again in a few minutes.";
+
+router.get('/apply-now', async (req, res) => {
+  // Depends on the visitor's invite, so it must never be cached.
+  res.set('Cache-Control', 'private, no-store');
+  const locals = {
     feeCents: APPLICATION_FEE_CENTS,
-    paymentsEnabled: !!stripe && !!res.app.locals.stripePublishableKey
-  });
+    paymentsEnabled: !!stripe && !!res.app.locals.stripePublishableKey,
+    inviteState: 'invalid',
+    invite: null,
+    inviteToken: '',
+    minStartDate: todayInNewYork()
+  };
+  const token = cleanToken(req.query.invite);
+  if (!token) return res.render('public/apply-now', locals);
+
+  const result = await fetchInvite(token);
+  if (result.status === 'valid') {
+    return res.render('public/apply-now', Object.assign(locals, {
+      inviteState: 'valid', invite: result.invite, inviteToken: token
+    }));
+  }
+  if (result.status === 'unavailable') {
+    console.error('[apply-now] Invite check failed:', result.error);
+    return res.status(503).render('public/apply-now', Object.assign(locals, { inviteState: 'unavailable' }));
+  }
+  res.render('public/apply-now', locals);
 });
 
 // Parse the two ID files (multipart), converting multer errors into JSON.
@@ -798,12 +825,16 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
     const ec_phone = f('emergency_contact_phone');
     const ec_email = f('emergency_contact_email');
     const ec_relationship = f('emergency_contact_relationship');
+    const start_date = f('start_date');
+    const end_date = f('end_date');
+    const inviteToken = cleanToken(body.invite);
     const idFront = req.files && req.files.id_front && req.files.id_front[0];
     const idBack = req.files && req.files.id_back && req.files.id_back[0];
 
+    if (!inviteToken) return res.status(400).json({ error: INVITE_ONLY_MESSAGE });
     // All fields are mandatory.
     if (!first_name || !last_name || !email || !phone || !birthdate || !ssn_last4 || !social_profile ||
-        !ec_name || !ec_phone || !ec_email || !ec_relationship) {
+        !ec_name || !ec_phone || !ec_email || !ec_relationship || !start_date || !end_date) {
       return res.status(400).json({ error: 'Please fill in all required fields.' });
     }
     if (!idFront || !idBack) {
@@ -821,8 +852,19 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
       [isPhone(ec_phone), 'Please enter a valid emergency contact phone number.'],
       [isEmail(ec_email), 'Please provide a valid emergency contact email.'],
       [isText(ec_relationship, 2, 50), 'Please enter the emergency contact relationship (2–50 characters).']
-    ]);
+    ]) || leaseDatesError(start_date, end_date);
     if (fieldError) return res.status(400).json({ error: fieldError });
+
+    // Check the invite again here: the page may have sat open past its expiry.
+    const inviteCheck = await fetchInvite(inviteToken);
+    if (inviteCheck.status === 'unavailable') {
+      console.error('[apply-now] Invite check failed:', inviteCheck.error);
+      return res.status(503).json({ error: INVITE_CHECK_FAILED });
+    }
+    if (inviteCheck.status !== 'valid') {
+      return res.status(400).json({ error: 'This invite is no longer valid. Contact us to view a room.' });
+    }
+    const invite = inviteCheck.invite;
 
     // Store the sensitive ID images in the private bucket (paths, not public URLs).
     let id_front_path, id_back_path;
@@ -851,11 +893,17 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
       identity_token: crypto.randomUUID()
     };
 
+    // The room, neighborhood and rent are a copy for admin only; the portal
+    // uses its own invite for the agreement.
     const { rows } = await pool.query(
-      `INSERT INTO tenant_applications (full_name, email, phone, answers, amount_cents, payment_status)
-       VALUES ($1, $2, $3, $4, $5, 'pending')
+      `INSERT INTO tenant_applications (full_name, email, phone, answers, amount_cents, payment_status,
+                                        invite_token, lease_start, lease_end,
+                                        invite_room_label, invite_neighborhood, invite_rent)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11)
        RETURNING id`,
-      [full_name, email, phone, answers, APPLICATION_FEE_CENTS]
+      [full_name, email, phone, answers, APPLICATION_FEE_CENTS,
+       inviteToken, start_date, end_date,
+       invite.roomLabel, invite.neighborhood, invite.monthlyRent]
     );
     const appId = rows[0].id;
 
@@ -917,6 +965,8 @@ router.get('/apply-now/complete', async (req, res) => {
     // checkout.session.completed webhook — whichever runs first wins, so a
     // refresh or a webhook race never re-sends the emails.
     const app = await finalizePaidApplication(session);
+    // Invite applications: have the portal send the agreement (never throws).
+    await sendAgreementsAfterPayment(session);
 
     // Already finalized (refresh, or the webhook beat us) — show success and
     // the identity step in its current state without re-emailing.

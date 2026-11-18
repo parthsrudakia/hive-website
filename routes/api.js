@@ -154,4 +154,30 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// --- Pending application agreements (Vercel cron, see vercel.json) ---
+// Retries paid invite applications whose agreement the portal hasn't sent
+// yet (utils/tenantApplication.js). Vercel sends
+// "Authorization: Bearer $CRON_SECRET"; anything else is refused.
+const { timingSafeEqual } = require('crypto');
+const { processPendingAgreements } = require('../utils/tenantApplication');
+
+router.get('/cron/application-agreements', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET is not configured' });
+  const given = Buffer.from(req.get('authorization') || '');
+  const expected = Buffer.from(`Bearer ${secret}`);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  try {
+    // Stays well inside the function time limit; the rest wait for tomorrow.
+    const result = await processPendingAgreements({ limit: 20, budgetMs: 40000 });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[agreements] cron error:', err);
+    res.status(500).json({ error: 'agreement retry failed' });
+  }
+});
+
 module.exports = router;

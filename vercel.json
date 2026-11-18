@@ -22,5 +22,8 @@
       "dest": "/public/favicon.svg"
     },
     { "src": "/(.*)", "dest": "/api/index.js" }
+  ],
+  "crons": [
+    { "path": "/api/cron/application-agreements", "schedule": "30 11 * * *" }
   ]
 }
