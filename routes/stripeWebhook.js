@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 const { sendMail, NOTIFY_EMAIL } = require('../utils/mailer');
-const { finalizePaidApplication } = require('../utils/tenantApplication');
+const { finalizePaidApplication, sendAgreementsAfterPayment } = require('../utils/tenantApplication');
 
 // Stripe webhook receiver for the paid tenant application:
 //
@@ -62,6 +62,10 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
         const app = await finalizePaidApplication(event.data.object);
         if (app) {
           console.log(`[stripe-webhook] Finalized paid application #${app.id} via checkout.session.completed`);
+        }
+        // Invite applications: have the portal send the agreement (never throws).
+        if (event.data.object.payment_status === 'paid') {
+          await sendAgreementsAfterPayment(event.data.object);
         }
         break;
       }
