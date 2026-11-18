@@ -30,6 +30,7 @@ const {
   marketForName,
   marketMatchesListing
 } = require('../utils/markets');
+const { PUBLIC_LISTING_SQL } = require('../utils/listingVisibility');
 
 // Cached, CDN-friendly proxy for listing photos — see utils/imageProxy.js.
 router.get('/img/:name', proxyImage);
@@ -100,7 +101,7 @@ router.get('/sitemap.xml', async (req, res) => {
       `SELECT id, city, COALESCE(NULLIF(btrim(location), ''), 'New York') AS location,
               COALESCE(updated_at, created_at) AS lastmod
          FROM listings
-        WHERE status != 'rented'
+        WHERE ${PUBLIC_LISTING_SQL}
         ORDER BY id ASC`
     );
     const staticPaths = ['/', '/properties', '/partners', '/faq', '/contact', '/privacy', '/terms'];
@@ -277,6 +278,11 @@ const isAdultDob = (s) => {
 const isSocialProfile = (s) =>
   /^(https?:\/\/)?(www\.)?(linkedin\.com\/(in|pub|company)\/|instagram\.com\/)[\w\-.%/?=&]+$/i.test(s);
 
+// Search filters for rooms. Price ranges are "min-max", min inclusive and max
+// exclusive (the last one is open-ended); bath is the room's bathroom type.
+const PRICE_RANGES = ['0-1500', '1500-2000', '2000-2500', '2500-999999'];
+const BATH_TYPES = ['private', 'shared'];
+
 // Returns the first error message, or null if every check passes.
 function firstError(checks) {
   for (const [ok, message] of checks) if (!ok) return message;
@@ -305,7 +311,7 @@ router.use(async (req, res, next) => {
       // (cards default it to 'New York'), so the footer links use it too.
       const { rows } = await pool.query(
         `SELECT DISTINCT COALESCE(NULLIF(btrim(location), ''), 'New York') AS city
-         FROM listings WHERE status != 'rented'
+         FROM listings WHERE ${PUBLIC_LISTING_SQL}
          ORDER BY city ASC`
       );
       footerCitiesCache = { cities: rows.map(r => r.city), fetchedAt: now };
@@ -336,10 +342,10 @@ router.get('/', edgeCache, async (req, res) => {
     // DISTINCT ON (title, city) keeps a single room per property in featuring.
     const { rows: featuredListings } = await pool.query(
       `SELECT * FROM (
-         SELECT DISTINCT ON (lower(btrim(title)), city) *
+         SELECT DISTINCT ON (COALESCE(portal_room_id, lower(btrim(title))), city) *
          FROM listings
-         WHERE featured = true AND status != 'rented'
-         ORDER BY lower(btrim(title)), city, sort_order ASC
+         WHERE featured = true AND ${PUBLIC_LISTING_SQL}
+         ORDER BY COALESCE(portal_room_id, lower(btrim(title))), city, sort_order ASC
        ) t
        ORDER BY sort_order ASC LIMIT 6`
     );
@@ -348,10 +354,10 @@ router.get('/', edgeCache, async (req, res) => {
     if (listings.length === 0) {
       const result = await pool.query(
         `SELECT * FROM (
-           SELECT DISTINCT ON (lower(btrim(title)), city) *
+           SELECT DISTINCT ON (COALESCE(portal_room_id, lower(btrim(title))), city) *
            FROM listings
-           WHERE status != 'rented'
-           ORDER BY lower(btrim(title)), city, created_at DESC
+           WHERE ${PUBLIC_LISTING_SQL}
+           ORDER BY COALESCE(portal_room_id, lower(btrim(title))), city, created_at DESC
          ) t
          ORDER BY created_at DESC LIMIT 6`
       );
@@ -392,32 +398,30 @@ router.get('/short-term-rentals/:slug', async (req, res, next) => {
   const market = MARKET_PAGES[req.params.slug];
   if (!market) return next();
 
-  const bedrooms = ['0', '1', '2', '3'].includes(req.query.bedrooms) ? req.query.bedrooms : '';
-  const price = ['0-3000', '3000-4500', '4500-6000', '6000-999999'].includes(req.query.price) ? req.query.price : '';
+  const bath = BATH_TYPES.includes(req.query.bath) ? req.query.bath : '';
+  const price = PRICE_RANGES.includes(req.query.price) ? req.query.price : '';
   const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
   const movein = validDate(req.query.movein);
   const moveout = validDate(req.query.moveout);
-  const filters = { bedrooms, price, movein, moveout };
-  const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
+  const filters = { bath, price, movein, moveout };
+  const hasNarrowFilters = !!(bath || price || movein || moveout);
 
   try {
     const matchNames = market.matchNames.map(value => value.toLowerCase());
     const params = [matchNames];
     const addParam = value => { params.push(value); return `$${params.length}`; };
     let query = `SELECT * FROM listings
-      WHERE status != 'rented'
+      WHERE ${PUBLIC_LISTING_SQL}
         AND (
           lower(COALESCE(NULLIF(btrim(location), ''), 'New York')) = ANY($1::text[])
           OR lower(COALESCE(city, '')) = ANY($1::text[])
         )`;
-    if (bedrooms) {
-      query += bedrooms === '3'
-        ? ` AND bedrooms >= ${addParam(3)}`
-        : ` AND bedrooms = ${addParam(parseInt(bedrooms, 10))}`;
+    if (bath) {
+      query += ` AND private_bath = ${addParam(bath === 'private')}`;
     }
     if (price) {
       const [minPrice, maxPrice] = price.split('-').map(Number);
-      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly <= ${addParam(maxPrice)}`;
+      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly < ${addParam(maxPrice)}`;
     }
     if (movein) {
       const p = addParam(movein);
@@ -478,32 +482,30 @@ router.get('/short-term-rentals/:slug', async (req, res, next) => {
 router.get('/properties', async (req, res) => {
   try {
     const location = typeof req.query.location === 'string' ? req.query.location.trim().slice(0, 100) : '';
-    const bedrooms = ['0', '1', '2', '3'].includes(req.query.bedrooms) ? req.query.bedrooms : '';
-    const price = ['0-3000', '3000-4500', '4500-6000', '6000-999999'].includes(req.query.price) ? req.query.price : '';
+    const bath = BATH_TYPES.includes(req.query.bath) ? req.query.bath : '';
+    const price = PRICE_RANGES.includes(req.query.price) ? req.query.price : '';
     const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
     const movein = validDate(req.query.movein);
     const moveout = validDate(req.query.moveout);
-    const filters = { location, bedrooms, price, movein, moveout };
-    const hasNarrowFilters = !!(bedrooms || price || movein || moveout);
+    const filters = { location, bath, price, movein, moveout };
+    const hasNarrowFilters = !!(bath || price || movein || moveout);
     const recognizedMarket = marketForName(location);
     if (recognizedMarket && !hasNarrowFilters) {
       return res.redirect(301, marketPath(recognizedMarket));
     }
 
-    let query = `SELECT * FROM listings WHERE status != 'rented'`;
+    let query = `SELECT * FROM listings WHERE ${PUBLIC_LISTING_SQL}`;
     const params = [];
     const addParam = value => { params.push(value); return `$${params.length}`; };
     if (location) {
       query += ` AND lower(COALESCE(NULLIF(btrim(location), ''), 'New York')) = lower(${addParam(location)})`;
     }
-    if (bedrooms) {
-      query += bedrooms === '3'
-        ? ` AND bedrooms >= ${addParam(3)}`
-        : ` AND bedrooms = ${addParam(parseInt(bedrooms, 10))}`;
+    if (bath) {
+      query += ` AND private_bath = ${addParam(bath === 'private')}`;
     }
     if (price) {
       const [minPrice, maxPrice] = price.split('-').map(Number);
-      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly <= ${addParam(maxPrice)}`;
+      query += ` AND price_monthly >= ${addParam(minPrice)} AND price_monthly < ${addParam(maxPrice)}`;
     }
     if (movein) {
       const p = addParam(movein);
@@ -544,7 +546,7 @@ router.get('/properties', async (req, res) => {
     res.render('public/properties', { listings, filters, seo, comingSoonMarket });
   } catch (err) {
     console.error('Error loading properties:', err);
-    res.render('public/properties', { listings: [], filters: { location: '', bedrooms: '', price: '', movein: '', moveout: '' }, seo: buildSeo(req) });
+    res.render('public/properties', { listings: [], filters: { location: '', bath: '', price: '', movein: '', moveout: '' }, seo: buildSeo(req) });
   }
 });
 
@@ -562,7 +564,7 @@ router.get('/properties/:id', edgeCache, async (req, res) => {
       });
     }
 
-    const { rows } = await pool.query("SELECT * FROM listings WHERE id = $1 AND status != 'rented'", [id]);
+    const { rows } = await pool.query(`SELECT * FROM listings WHERE id = $1 AND ${PUBLIC_LISTING_SQL}`, [id]);
     if (rows.length === 0) {
       return res.status(404).render('public/404', {
         seo: buildSeo(req, {
@@ -579,7 +581,7 @@ router.get('/properties/:id', edgeCache, async (req, res) => {
     // Fetch related listings (same neighborhood or city, excluding current)
     const { rows: relatedListings } = await pool.query(
       `SELECT * FROM listings
-       WHERE id != $1 AND status != 'rented'
+       WHERE id != $1 AND ${PUBLIC_LISTING_SQL}
        AND (neighborhood = $2 OR city = $3)
        ORDER BY sort_order ASC
        LIMIT 3`,
@@ -599,7 +601,9 @@ router.get('/properties/:id', edgeCache, async (req, res) => {
     relatedListings.forEach(rewriteListingImages);
 
     const publicName = req.app.locals.publicTitle(listing);
-    const bedroomLabel = Number(listing.bedrooms) === 0 ? 'studio' : `${listing.bedrooms}-bedroom apartment`;
+    const bedroomLabel = listing.source === 'portal'
+      ? 'private room'
+      : (Number(listing.bedrooms) === 0 ? 'studio' : `${listing.bedrooms}-bedroom apartment`);
     const publicArea = [listing.neighborhood, listing.city || listing.location].filter(Boolean).join(', ');
     const seo = buildSeo(req, {
       title: `${publicName} | Hive`,
@@ -659,9 +663,28 @@ function comingSoonWaitlistCity(property, listingId) {
   return market && market.comingSoon ? market.name : null;
 }
 
-router.get('/apply', (req, res) => {
+// Rooms synced from the portal are real and open, so their button reads
+// "Request this room" and the sign-up is a room request (labeled Request in
+// the admin Applications tab), not a waitlist entry.
+const ROOM_REQUEST_MESSAGE = 'We got your request for this room and will be in touch shortly.';
+
+const listingIdFrom = value => (/^\d+$/.test(String(value || '')) ? parseInt(value, 10) : null);
+
+async function isRoomRequest(listingId) {
+  if (!listingId) return false;
+  try {
+    const { rows } = await pool.query('SELECT source FROM listings WHERE id = $1', [listingId]);
+    return !!rows[0] && rows[0].source === 'portal';
+  } catch (err) {
+    console.error('Room request lookup failed:', err.message);
+    return false;
+  }
+}
+
+router.get('/apply', async (req, res) => {
   res.render('public/apply', {
     success: false,
+    requestRoom: await isRoomRequest(listingIdFrom(req.query.listing)),
     prefill: {
       property: req.query.property || '',
       listing: req.query.listing || '',
@@ -676,6 +699,8 @@ router.post('/apply', applyLimiter, async (req, res) => {
     const { full_name, email, phone, about, social_media, property, move_in, move_out } = req.body;
     // Only official Instagram / LinkedIn profile links are accepted; stored normalized.
     const social = parseSocialLink(social_media);
+    const listingId = listingIdFrom(req.body.listing_id);
+    const requestRoom = await isRoomRequest(listingId);
 
     const guard = await checkFormGuards(req);
     if (guard.verdict === 'spam') {
@@ -687,6 +712,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
       return res.status(400).render('public/apply', {
         success: false,
         error: guard.message,
+        requestRoom,
         prefill: {
           property: property || '',
           listing: req.body.listing_id || '',
@@ -707,6 +733,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
       return res.status(400).render('public/apply', {
         success: false,
         error,
+        requestRoom,
         prefill: {
           property: property || '',
           listing: req.body.listing_id || '',
@@ -716,8 +743,7 @@ router.post('/apply', applyLimiter, async (req, res) => {
       });
     }
 
-    // Save to database, including the listing and dates from a listing's "Join the waitlist" button
-    const listingId = /^\d+$/.test(String(req.body.listing_id || '')) ? parseInt(req.body.listing_id, 10) : null;
+    // Save to database, including the listing and dates from a listing's button
     await pool.query(
       `INSERT INTO applications (full_name, email, phone, about, social_media, property, move_in, move_out, listing_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -728,24 +754,26 @@ router.post('/apply', applyLimiter, async (req, res) => {
     // is where they are reviewed and replied to.
 
     const city = comingSoonWaitlistCity(property, listingId);
-    const message = city
-      ? `Thanks, you're on the ${city} waitlist. We'll reach out when a room that fits your dates opens up.`
-      : WAITLIST_MESSAGE;
+    const message = requestRoom
+      ? ROOM_REQUEST_MESSAGE
+      : city
+        ? `Thanks, you're on the ${city} waitlist. We'll reach out when a room that fits your dates opens up.`
+        : WAITLIST_MESSAGE;
 
-    // Send a confirmation to the person who joined the waitlist (best-effort)
+    // Send a confirmation to the person who signed up (best-effort)
     try {
       await sendMail({
         to: email,
-        subject: "You're on the Hive waitlist",
+        subject: requestRoom ? 'We got your Hive room request' : "You're on the Hive waitlist",
         html: confirmationHtml(city ? `Hi ${full_name},` : `Thanks, ${full_name}!`, [
           message
         ])
       });
     } catch (mailErr) {
-      console.error('[mail] Failed to send waitlist confirmation:', mailErr.message);
+      console.error('[mail] Failed to send sign-up confirmation:', mailErr.message);
     }
 
-    res.render('public/apply', { success: true, successMessage: message });
+    res.render('public/apply', { success: true, successMessage: message, requestRoom });
   } catch (err) {
     console.error('Application submission error:', err);
     // Still show success if DB saved but email failed

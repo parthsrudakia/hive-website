@@ -185,14 +185,17 @@ function listingSchema(listing, publicName) {
   const images = (listing.images || []).map(absoluteUrl);
   const city = listing.city || listing.location || 'the city';
   const neighborhood = listing.neighborhood ? `${listing.neighborhood}, ${city}` : city;
+  const isRoom = listing.source === 'portal';
   const schema = {
-    '@type': 'Apartment',
+    '@type': isRoom ? 'Room' : 'Apartment',
     '@id': `${absoluteUrl(`/properties/${listing.id}`)}#residence`,
     name: publicName,
     url: absoluteUrl(`/properties/${listing.id}`),
     // Listing descriptions can contain private building/address details. Keep
     // the public schema useful without exposing anything the UI anonymizes.
-    description: `A move-in ready, furnished apartment in ${neighborhood} with flexible lease terms.`,
+    description: isRoom
+      ? `A furnished private room in ${neighborhood} with flexible, month-to-month terms.`
+      : `A move-in ready, furnished apartment in ${neighborhood} with flexible lease terms.`,
     image: images,
     numberOfBedrooms: Number(listing.bedrooms || 0),
     numberOfBathroomsTotal: Number(listing.bathrooms || 0),

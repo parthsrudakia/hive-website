@@ -5,6 +5,13 @@ const MARKET_PAGES = {
     shortName: 'New York',
     state: 'NY',
     matchNames: ['new york', 'new york city', 'nyc'],
+    // Portal neighborhood labels (and abbreviations) that belong to this market,
+    // keyed by the public name. Used by the room sync (utils/roomSync.js).
+    neighborhoods: {
+      'Upper East Side': ['UES'],
+      'Financial District': ['FiDi'],
+      'Battery Park City': ['Battery Park']
+    },
     title: 'Short-Term Furnished Rentals in New York | Hive',
     description: 'Find short-term furnished rentals in New York for stays of 30 days or longer. Explore move-in ready apartments with WiFi, utilities, and flexible lease terms.',
     eyebrow: '30+ day stays in New York',
@@ -41,8 +48,15 @@ const MARKET_PAGES = {
     shortName: 'Jersey City',
     state: 'NJ',
     matchNames: ['jersey city'],
-    // No Jersey City homes yet: its market page and the /properties filter show a
-    // "Coming soon" waitlist panel instead of listings. Remove once rooms are listed.
+    neighborhoods: {
+      'Journal Square': ['JSQ'],
+      'Jersey City Heights': [],
+      'Historic Downtown': []
+    },
+    // While set, the market page and the /properties filter show a "Coming soon"
+    // waitlist panel, and rooms synced from the portal for this market (photos
+    // already copied) stay out of every public list. Delete this one line to
+    // show them; nothing else needs to change (utils/listingVisibility.js).
     comingSoon: true,
     title: 'Short-Term Furnished Rentals in Jersey City | Hive',
     description: 'Explore short-term furnished rentals in Jersey City for stays of 30 days or longer. Find move-in ready apartments with flexible terms near New York City.',
@@ -80,6 +94,9 @@ const MARKET_PAGES = {
     shortName: 'Hoboken',
     state: 'NJ',
     matchNames: ['hoboken'],
+    neighborhoods: {
+      Hoboken: []
+    },
     title: 'Short-Term Furnished Rentals in Hoboken | Hive',
     description: 'Browse short-term furnished rentals in Hoboken for stays of 30 days or longer. Find flexible, move-in ready apartments with WiFi and utilities included.',
     eyebrow: '30+ day stays in Hoboken',
@@ -133,6 +150,21 @@ function marketMatchesListing(market, listing) {
   return values.some(value => market.matchNames.includes(value));
 }
 
+// The market and public neighborhood name for a portal neighborhood label,
+// matching the public name or any alias, ignoring case. Null when unknown.
+function neighborhoodForName(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return null;
+  for (const market of MARKET_LIST) {
+    for (const [name, aliases] of Object.entries(market.neighborhoods || {})) {
+      if ([name, ...aliases].some(label => label.toLowerCase() === normalized)) {
+        return { name, market };
+      }
+    }
+  }
+  return null;
+}
+
 function marketUrl(value) {
   const market = marketForName(value);
   return market ? marketPath(market) : `/properties?location=${encodeURIComponent(value)}`;
@@ -144,5 +176,6 @@ module.exports = {
   marketPath,
   marketForName,
   marketMatchesListing,
+  neighborhoodForName,
   marketUrl
 };

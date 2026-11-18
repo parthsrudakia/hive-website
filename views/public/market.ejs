@@ -166,23 +166,21 @@
   <div class="container search-wrap">
     <form class="search-bar" action="/short-term-rentals/<%= market.slug %>" method="GET" aria-label="Search <%= market.name %> furnished rentals">
       <div class="field">
-        <label for="market-bedrooms">Bedrooms</label>
-        <select id="market-bedrooms" name="bedrooms">
-          <option value="">Any size</option>
-          <option value="0" <%= filters.bedrooms === '0' ? 'selected' : '' %>>Studio</option>
-          <option value="1" <%= filters.bedrooms === '1' ? 'selected' : '' %>>1 bedroom</option>
-          <option value="2" <%= filters.bedrooms === '2' ? 'selected' : '' %>>2 bedrooms</option>
-          <option value="3" <%= filters.bedrooms === '3' ? 'selected' : '' %>>3+ bedrooms</option>
+        <label for="market-bath">Bathroom</label>
+        <select id="market-bath" name="bath">
+          <option value="">Any</option>
+          <option value="private" <%= filters.bath === 'private' ? 'selected' : '' %>>Private bath</option>
+          <option value="shared" <%= filters.bath === 'shared' ? 'selected' : '' %>>Shared bath</option>
         </select>
       </div>
       <div class="field">
         <label for="market-price">Monthly budget</label>
         <select id="market-price" name="price">
           <option value="">Any budget</option>
-          <option value="0-3000" <%= filters.price === '0-3000' ? 'selected' : '' %>>Under $3,000</option>
-          <option value="3000-4500" <%= filters.price === '3000-4500' ? 'selected' : '' %>>$3,000–$4,500</option>
-          <option value="4500-6000" <%= filters.price === '4500-6000' ? 'selected' : '' %>>$4,500–$6,000</option>
-          <option value="6000-999999" <%= filters.price === '6000-999999' ? 'selected' : '' %>>$6,000+</option>
+          <option value="0-1500" <%= filters.price === '0-1500' ? 'selected' : '' %>>Under $1,500</option>
+          <option value="1500-2000" <%= filters.price === '1500-2000' ? 'selected' : '' %>>$1,500 to $2,000</option>
+          <option value="2000-2500" <%= filters.price === '2000-2500' ? 'selected' : '' %>>$2,000 to $2,500</option>
+          <option value="2500-999999" <%= filters.price === '2500-999999' ? 'selected' : '' %>>$2,500+</option>
         </select>
       </div>
       <div class="field">
@@ -208,11 +206,11 @@
           <div class="listing-image">
             <% if (listing.images && listing.images[0]) { %><img src="<%= listing.images[0] %>" alt="<%= publicName %>" <%- index === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %>><% } %>
             <% if (listing.status && listing.status !== 'available') { %><span class="status"><%= listing.status === 'just_listed' ? 'Just listed' : 'Coming soon' %></span><% } %>
-            <span class="price">$<%= Number(listing.price_monthly || 0).toLocaleString('en-US') %> <small>/ month</small></span>
+            <span class="price">$<%= Number(listing.price_monthly || 0).toLocaleString('en-US') %> <small>/ month<%= listing.source === 'portal' ? ' incl. services' : '' %></small></span>
           </div>
           <div class="listing-body">
             <h3><%= publicName %></h3>
-            <div class="listing-meta"><span><%= listing.neighborhood || market.name %>, <%= listing.city || market.name %></span><span class="dot"></span><span><%= Number(listing.bedrooms) === 0 ? 'Studio' : listing.bedrooms + (Number(listing.bedrooms) === 1 ? ' bedroom' : ' bedrooms') %></span><% if (listing.bathrooms) { %><span class="dot"></span><span><%= listing.bathrooms %> bath</span><% } %></div>
+            <div class="listing-meta"><span><%= listing.neighborhood || market.name %>, <%= listing.city || market.name %></span><span class="dot"></span><% if (listing.source === 'portal') { %><% roomFacts(listing).forEach(function(fact, i) { %><% if (i) { %><span class="dot"></span><% } %><span><%= fact %></span><% }); %><% } else { %><span><%= Number(listing.bedrooms) === 0 ? 'Studio' : listing.bedrooms + (Number(listing.bedrooms) === 1 ? ' bedroom' : ' bedrooms') %></span><% if (listing.bathrooms) { %><span class="dot"></span><span><%= listing.bathrooms %> bath</span><% } %><% } %></div>
             <% if (listing.key_amenities && listing.key_amenities.length) { %><div class="amenities"><% listing.key_amenities.slice(0,3).forEach(function(amenity) { %><span class="amenity"><%= amenity %></span><% }); %></div><% } %>
           </div>
         </a>
