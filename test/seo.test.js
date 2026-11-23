@@ -168,9 +168,9 @@ test('publishes unique listing metadata and Apartment JSON-LD', async () => {
 
 test('publishes one useful, canonical landing page per target rental market', async () => {
   const markets = [
-    ['/short-term-rentals/new-york', 'Short-Term Furnished Rentals in New York'],
-    ['/short-term-rentals/jersey-city', 'Short-Term Furnished Rentals in Jersey City'],
-    ['/short-term-rentals/hoboken', 'Short-Term Furnished Rentals in Hoboken']
+    ['/short-term-rentals/new-york', 'Furnished Rentals in New York'],
+    ['/short-term-rentals/jersey-city', 'Furnished Rentals in Jersey City'],
+    ['/short-term-rentals/hoboken', 'Furnished Rentals in Hoboken']
   ];
   for (const [pathname, heading] of markets) {
     const response = await fetch(`${baseUrl}${pathname}`);
