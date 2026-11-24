@@ -138,6 +138,16 @@
                   <button type="button" class="id-btn" onclick="viewId(<%= app.id %>, 'back', <%= backPdf %>, '<%= name.replace(/'/g, "") %> — ID Back')">Back</button>
                 <% } %>
                 <% if (!a.id_front_path && !a.id_back_path) { %><span class="sub">—</span><% } %>
+                <% var incomeDocs = Array.isArray(a.income_docs) ? a.income_docs : []; %>
+                <% if (incomeDocs.length) { %>
+                  <div class="sub" style="margin-top:8px;">Bank statements / pay stubs</div>
+                  <% incomeDocs.forEach(function(doc, i) {
+                       var docName = String(doc.name || ('Document ' + (i + 1)));
+                       var docPdf = String(doc.path || '').toLowerCase().endsWith('.pdf');
+                  %>
+                    <button type="button" class="id-btn" title="<%= docName %>" data-label="<%= name %> — <%= docName %>" onclick="viewFile('/admin/paid-applications/<%= app.id %>/doc/<%= i %>', <%= docPdf %>, this.dataset.label)">Doc <%= i + 1 %></button>
+                  <% }); %>
+                <% } %>
               </td>
               <td>
                 <% var idst = app.identity_status || 'not_started'; %>
@@ -198,7 +208,10 @@
     var openTab = document.getElementById('id-open-tab');
 
     function viewId(appId, side, isPdf, label) {
-      var url = '/admin/paid-applications/' + appId + '/id/' + side;
+      viewFile('/admin/paid-applications/' + appId + '/id/' + side, isPdf, label);
+    }
+
+    function viewFile(url, isPdf, label) {
       titleEl.textContent = label;
       openTab.href = url;
       img.style.display = 'none'; frame.style.display = 'none';

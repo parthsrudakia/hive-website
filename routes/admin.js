@@ -7,7 +7,7 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const pool = require('../db/pool');
 const { parseSocialLink } = require('../utils/socialLink');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, safeReturnTo } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
 const { sendMail, replyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
@@ -55,9 +55,11 @@ router.post('/login', async (req, res) => {
     if (!match) {
       return res.render('admin/login', { error: 'Invalid email or password.' });
     }
+    const returnTo = safeReturnTo(req.session.returnTo);
+    delete req.session.returnTo;
     req.session.adminId = admin.id;
     req.session.adminName = admin.name;
-    res.redirect('/admin/dashboard');
+    res.redirect(returnTo || '/admin/dashboard');
   } catch (err) {
     console.error('Login error:', err);
     res.render('admin/login', { error: 'Something went wrong. Please try again.' });
@@ -837,6 +839,24 @@ router.get('/paid-applications/:id/id/:side', requireAdmin, async (req, res) => 
   } catch (err) {
     console.error('ID view error:', err);
     res.status(500).send('Could not load ID');
+  }
+});
+
+// Same idea for the optional bank statements / pay stubs (by position).
+router.get('/paid-applications/:id/doc/:index', requireAdmin, async (req, res) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    const { rows } = await pool.query('SELECT answers FROM tenant_applications WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).send('Application not found');
+    const docs = (rows[0].answers && rows[0].answers.income_docs) || [];
+    const doc = Number.isInteger(index) ? docs[index] : null;
+    if (!doc || !doc.path) return res.status(404).send('No document on file');
+    const url = await signedPrivateUrl(doc.path, 300); // 5-minute link
+    if (!url) return res.status(404).send('Document unavailable');
+    res.redirect(url);
+  } catch (err) {
+    console.error('Document view error:', err);
+    res.status(500).send('Could not load document');
   }
 });
 

@@ -236,16 +236,18 @@ const APPLICATION_FEE_CENTS = parseInt(process.env.APPLICATION_FEE_CENTS || '200
 const APPLICATION_FEE_PRICE_ID = process.env.STRIPE_APPLICATION_FEE_PRICE_ID || '';
 
 // Photo-ID uploads kept in memory, then pushed to the PRIVATE bucket. Accepts
-// images + PDF, 10 MB max per file.
+// images + PDF. Vercel rejects any request body over 4.5 MB before it reaches
+// this app, so the apply-now page downsizes photos in the browser and the
+// per-file cap here stays under that ceiling.
 const idUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 4 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|pdf/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
     const mime = allowed.test(file.mimetype);
     if (ext || mime) return cb(null, true);
-    cb(new Error('Photo ID must be an image (JPEG, PNG, WebP) or PDF.'));
+    cb(new Error('Uploads must be images (JPEG, PNG, WebP) or PDFs.'));
   }
 });
 
@@ -763,16 +765,25 @@ router.post('/apply', applyLimiter, async (req, res) => {
 router.get('/apply-now', (req, res) => {
   res.render('public/apply-now', {
     feeCents: APPLICATION_FEE_CENTS,
+    maxIncomeDocs: MAX_INCOME_DOCS,
     paymentsEnabled: !!stripe && !!res.app.locals.stripePublishableKey
   });
 });
 
 // Parse the two ID files (multipart), converting multer errors into JSON.
-const idFields = idUpload.fields([{ name: 'id_front', maxCount: 1 }, { name: 'id_back', maxCount: 1 }]);
+// Optional proof-of-income files (bank statements / pay stubs) ride along too.
+const MAX_INCOME_DOCS = 6;
+const idFields = idUpload.fields([
+  { name: 'id_front', maxCount: 1 },
+  { name: 'id_back', maxCount: 1 },
+  { name: 'income_docs', maxCount: MAX_INCOME_DOCS }
+]);
 function handleIdUpload(req, res, next) {
   idFields(req, res, (err) => {
     if (err) {
-      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Each photo ID must be 10 MB or smaller.' : (err.message || 'File upload failed.');
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Each file must be 4 MB or smaller.'
+        : err.code === 'LIMIT_UNEXPECTED_FILE' ? `Please upload at most ${MAX_INCOME_DOCS} bank statement / pay stub files.`
+        : (err.message || 'File upload failed.');
       return res.status(400).json({ error: msg });
     }
     next();
@@ -800,6 +811,7 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
     const ec_relationship = f('emergency_contact_relationship');
     const idFront = req.files && req.files.id_front && req.files.id_front[0];
     const idBack = req.files && req.files.id_back && req.files.id_back[0];
+    const incomeDocs = (req.files && req.files.income_docs) || [];
 
     // All fields are mandatory.
     if (!first_name || !last_name || !email || !phone || !birthdate || !ssn_last4 || !social_profile ||
@@ -834,6 +846,21 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
       return res.status(500).json({ error: 'Could not upload your photo ID. Please try again.' });
     }
 
+    // Optional bank statements / pay stubs, kept in the same private bucket.
+    // Stored as [{ path, name }] so the admin sees the original file names.
+    const income_docs = [];
+    try {
+      for (const doc of incomeDocs) {
+        income_docs.push({
+          path: await storePrivateFile(doc, 'pending'),
+          name: String(doc.originalname || 'document').slice(0, 120)
+        });
+      }
+    } catch (upErr) {
+      console.error('Income document upload failed:', upErr.message);
+      return res.status(500).json({ error: 'Could not upload your bank statements / pay stubs. Please try again.' });
+    }
+
     const full_name = `${first_name} ${last_name}`;
     const answers = {
       first_name, last_name,
@@ -845,6 +872,7 @@ router.post('/apply-now/session', applyNowLimiter, handleIdUpload, async (req, r
       emergency_contact_email: ec_email,
       emergency_contact_relationship: ec_relationship,
       id_front_path, id_back_path,
+      income_docs,
       // Unguessable reference used in the Stripe Identity return URL, so the
       // post-verification page can look this application up without exposing
       // sequential IDs.
