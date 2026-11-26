@@ -49,7 +49,29 @@ CREATE TABLE IF NOT EXISTS listings (
   floor_plan_image     VARCHAR(500),
   location             VARCHAR(100) DEFAULT 'New York',
   location_description  TEXT,
-  show_booking         BOOLEAN DEFAULT TRUE
+  show_booking         BOOLEAN DEFAULT TRUE,
+  -- rooms synced from the portal (utils/roomSync.js); no address or unit kept
+  portal_room_id       VARCHAR(64) UNIQUE,
+  source               VARCHAR(20),
+  synced_at            TIMESTAMP,
+  hidden_reason        VARCHAR(50),
+  private_bath         BOOLEAN
+);
+
+-- Room sync: Drive photos already copied (each copied once), and the
+-- single-row lock + last result for the admin panel.
+CREATE TABLE IF NOT EXISTS room_sync_photos (
+  drive_file_id  VARCHAR(128) PRIMARY KEY,
+  url            TEXT NOT NULL,
+  created_at     TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS room_sync_state (
+  id                INTEGER PRIMARY KEY,
+  running_since     TIMESTAMP,
+  last_started_at   TIMESTAMP,
+  last_finished_at  TIMESTAMP,
+  last_result       JSONB
 );
 
 -- Bookings ----------------------------------------------------

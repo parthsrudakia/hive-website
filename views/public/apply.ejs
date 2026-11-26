@@ -427,9 +427,15 @@ body {
 <!-- PAGE HEADER -->
 <section class="page-header">
   <div class="container">
+    <% if (locals.requestRoom) { %>
+    <div class="section-tag">Request</div>
+    <h1>Request this <em>Room.</em></h1>
+    <p>Tell us a little about yourself and when you'd like to move in, and we'll be in touch about this room.</p>
+    <% } else { %>
     <div class="section-tag">Waitlist</div>
     <h1>Join the <em>Waitlist.</em></h1>
     <p>Tell us a little about yourself and when you'd like to move in, and we'll reach out when a room that fits your dates opens up.</p>
+    <% } %>
   </div>
 </section>
 
@@ -439,13 +445,13 @@ body {
     <div class="apply-inner">
       <% if (typeof success !== 'undefined' && success) { %>
       <div class="apply-success">
-        <h2>You're on the <em>Waitlist.</em></h2>
+        <h2><% if (locals.requestRoom) { %>Request <em>Received.</em><% } else { %>You're on the <em>Waitlist.</em><% } %></h2>
         <p><%= locals.successMessage || "This home isn't open right now. You're on the waitlist, and we'll reach out when a room that fits your dates opens up." %></p>
         <a href="/properties">Browse Properties <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg></a>
       </div>
       <% } else { %>
       <h2>Tell Us About <em>Yourself.</em></h2>
-      <p class="apply-intro">Fill out the form below to join the waitlist.</p>
+      <p class="apply-intro">Fill out the form below to <%= locals.requestRoom ? 'request this room' : 'join the waitlist' %>.</p>
       <% if (typeof error !== 'undefined' && error) { %>
       <div class="form-error"><%= error %></div>
       <% } %>
@@ -506,7 +512,7 @@ body {
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         <% } %>
         <button type="submit" class="apply-submit">
-          Join the waitlist
+          <%= locals.requestRoom ? 'Request this room' : 'Join the waitlist' %>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.3"/></svg>
         </button>
       </form>

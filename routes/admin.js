@@ -7,12 +7,14 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const pool = require('../db/pool');
 const { parseSocialLink } = require('../utils/socialLink');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, safeReturnTo } = require('../middleware/auth');
 const { storeImage, signedPrivateUrl } = require('../utils/storage');
 const { sendMail, replyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { rewriteReply, rewriteEnabled } = require('../utils/rewrite');
 const { processPendingAgreements } = require('../utils/tenantApplication');
+const { roomSyncConfig, runRoomSync } = require('../utils/roomSync');
+const { roomHiddenReason } = require('../utils/listingVisibility');
 const Anthropic = require('@anthropic-ai/sdk');
 
 // --- Multer config for image uploads ---
@@ -56,9 +58,11 @@ router.post('/login', async (req, res) => {
     if (!match) {
       return res.render('admin/login', { error: 'Invalid email or password.' });
     }
+    const returnTo = safeReturnTo(req.session.returnTo);
+    delete req.session.returnTo;
     req.session.adminId = admin.id;
     req.session.adminName = admin.name;
-    res.redirect('/admin/dashboard');
+    res.redirect(returnTo || '/admin/dashboard');
   } catch (err) {
     console.error('Login error:', err);
     res.render('admin/login', { error: 'Something went wrong. Please try again.' });
@@ -240,20 +244,78 @@ router.post('/account/password', requireAdmin, async (req, res) => {
 
 // --- Protected Admin Routes ---
 
+const ROOM_HIDDEN_LABELS = {
+  no_photos: 'No photos yet',
+  no_price: 'No price',
+  unknown_neighborhood: 'Neighborhood not mapped',
+  coming_soon_market: 'Coming-soon market'
+};
+
+// Status for the "Rooms from the portal" panel: last sync, and which synced
+// rooms are shown or hidden right now (same rules as the public pages).
+async function roomSyncPanel() {
+  const config = roomSyncConfig();
+  const panel = { configured: config.enabled, missing: config.missing, state: null, shown: 0, hidden: [], error: null };
+  try {
+    const { rows: [state] } = await pool.query(
+      'SELECT running_since, last_finished_at, last_result FROM room_sync_state WHERE id = 1'
+    );
+    panel.state = state || null;
+    const { rows } = await pool.query(
+      `SELECT title, location, status, hidden_reason FROM listings
+        WHERE source = 'portal' AND status != 'rented' ORDER BY location, title`
+    );
+    for (const room of rows) {
+      const reason = roomHiddenReason(room);
+      if (reason) panel.hidden.push({ title: room.title, reason: ROOM_HIDDEN_LABELS[reason] || reason });
+      else panel.shown++;
+    }
+  } catch (err) {
+    // Before the first deploy's migrations run, the tables don't exist yet.
+    panel.error = err.message;
+  }
+  return panel;
+}
+
 router.get('/dashboard', requireAdmin, async (req, res) => {
+  const roomSync = await roomSyncPanel();
   try {
     const { rows: listings } = await pool.query(
       'SELECT * FROM listings ORDER BY sort_order ASC, created_at DESC'
     );
     res.render('admin/dashboard', {
       listings,
+      roomSync,
       adminName: req.session.adminName,
       success: req.query.success || null
     });
   } catch (err) {
     console.error('Dashboard error:', err);
-    res.render('admin/dashboard', { listings: [], adminName: req.session.adminName, success: null });
+    res.render('admin/dashboard', { listings: [], roomSync, adminName: req.session.adminName, success: null });
   }
+});
+
+// --- Sync rooms from the portal now (same job as the daily cron) ---
+router.post('/listings/sync-rooms', requireAdmin, async (req, res) => {
+  let message;
+  try {
+    const result = await runRoomSync();
+    if (result.skipped === 'not configured') {
+      message = `Room sync is off: set ${result.missing.join(' and ')}.`;
+    } else if (result.skipped) {
+      message = 'A room sync is already running. Try again in a minute.';
+    } else if (!result.ok) {
+      message = `Room sync failed: ${result.error}`;
+    } else {
+      message = `Room sync done: ${result.shown} shown, ${result.hidden.length} hidden, ` +
+        `${result.photos.copied} photo(s) copied.` +
+        (result.photos.pending ? ` ${result.photos.pending} photo(s) still to copy: press Sync rooms now again.` : '');
+    }
+  } catch (err) {
+    console.error('Room sync error:', err);
+    message = 'Room sync failed. See the server log.';
+  }
+  res.redirect('/admin/dashboard?success=' + encodeURIComponent(message));
 });
 
 // --- Reorder listings (drag-and-drop) ---
@@ -554,7 +616,7 @@ router.get('/applications', requireAdmin, async (req, res) => {
     // New rows carry listing_id; older rows only have the public title text,
     // so fall back to matching that against the current listings.
     const { rows: listings } = await pool.query(
-      'SELECT id, title, city, neighborhood, bedrooms, property_type FROM listings'
+      'SELECT id, title, city, neighborhood, bedrooms, property_type, source FROM listings'
     );
     const byId = new Map(listings.map(l => [l.id, l]));
     const byTitle = new Map();
@@ -568,6 +630,8 @@ router.get('/applications', requireAdmin, async (req, res) => {
         || null;
       app.listing_url = match ? `/properties/${match.id}` : null;
       app.listing_title = match ? match.title : null;
+      // A sign-up from a room synced from the portal is a room request.
+      app.room_request = !!(app.listing_id && byId.get(app.listing_id) && byId.get(app.listing_id).source === 'portal');
       // Older rows may hold non-Instagram/LinkedIn links; those render as-is.
       app.social = parseSocialLink(app.social_media);
     }
@@ -595,7 +659,9 @@ function escapeHtml(s) {
 router.get('/applications/:id/messages', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, full_name, email, phone, about, social_media, property, move_in, move_out, listing_id, source, subject, created_at FROM applications WHERE id = $1',
+      `SELECT id, full_name, email, phone, about, social_media, property, move_in, move_out, listing_id, source, subject, created_at,
+              EXISTS (SELECT 1 FROM listings l WHERE l.id = applications.listing_id AND l.source = 'portal') AS room_request
+         FROM applications WHERE id = $1`,
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ ok: false, error: 'Application not found' });
@@ -858,6 +924,24 @@ router.post('/paid-applications/:id/retry-agreement', requireAdmin, async (req, 
     console.error('Retry agreement error:', err);
   }
   res.redirect('/admin/paid-applications');
+});
+
+// Same idea for the optional bank statements / pay stubs (by position).
+router.get('/paid-applications/:id/doc/:index', requireAdmin, async (req, res) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    const { rows } = await pool.query('SELECT answers FROM tenant_applications WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).send('Application not found');
+    const docs = (rows[0].answers && rows[0].answers.income_docs) || [];
+    const doc = Number.isInteger(index) ? docs[index] : null;
+    if (!doc || !doc.path) return res.status(404).send('No document on file');
+    const url = await signedPrivateUrl(doc.path, 300); // 5-minute link
+    if (!url) return res.status(404).send('Document unavailable');
+    res.redirect(url);
+  } catch (err) {
+    console.error('Document view error:', err);
+    res.status(500).send('Could not load document');
+  }
 });
 
 router.post('/paid-applications/:id/delete', requireAdmin, async (req, res) => {

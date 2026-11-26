@@ -69,6 +69,26 @@
       background: #333330;
     }
 
+    /* --- Rooms from the portal --- */
+    .room-sync {
+      background: var(--white, #fff);
+      border: 1px solid #e0ddd7;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .room-sync-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .room-sync h3 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+    .room-sync-meta { font-size: 13px; color: #8a8378; margin: 0; }
+    .room-sync form { margin: 0; }
+    .room-sync .btn-primary[disabled] { opacity: 0.4; cursor: not-allowed; }
+    .room-sync-hidden { margin: 12px 0 0; padding: 0; list-style: none; font-size: 13px; }
+    .room-sync-hidden li { padding: 4px 0; border-top: 1px solid #eceae5; display: flex; justify-content: space-between; gap: 12px; }
+    .room-sync-hidden span { color: #8a8378; white-space: nowrap; }
+    .room-sync details { margin-top: 10px; font-size: 12px; color: #8a8378; }
+    .room-sync details li { margin: 2px 0; }
+    .portal-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; font-size: 11px; font-weight: 600; color: #b87d09; background: #fdf3dc; border-radius: 999px; white-space: nowrap; }
+
     /* --- Success Message --- */
     .success-message {
       background: #f0fdf4;
@@ -358,6 +378,46 @@
       <a href="/admin/listings/new" class="btn-primary">+ Add New Listing</a>
     </div>
 
+    <% if (locals.roomSync) { const sync = roomSync; const last = sync.state && sync.state.last_result; %>
+      <section class="room-sync" aria-label="Rooms from the portal">
+        <div class="room-sync-head">
+          <div>
+            <h3>Rooms from the portal</h3>
+            <p class="room-sync-meta">
+              <% if (!sync.configured) { %>
+                Sync is off: set <%= sync.missing.join(' and ') %> in the environment.
+              <% } else if (sync.error) { %>
+                Sync status unavailable (<%= sync.error %>).
+              <% } else if (sync.state && sync.state.last_finished_at) { %>
+                Last sync <%= new Date(sync.state.last_finished_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %> ET<%= last && !last.ok ? ' (failed: ' + last.error + ')' : '' %>
+                &middot; <%= sync.shown %> shown &middot; <%= sync.hidden.length %> hidden<% if (last && last.photos && last.photos.pending) { %> &middot; <%= last.photos.pending %> photo(s) still to copy<% } %>
+              <% } else { %>
+                Not synced yet. <%= sync.shown %> shown &middot; <%= sync.hidden.length %> hidden.
+              <% } %>
+            </p>
+          </div>
+          <form method="POST" action="/admin/listings/sync-rooms">
+            <button type="submit" class="btn-primary" <%= sync.configured ? '' : 'disabled' %>>Sync rooms now</button>
+          </form>
+        </div>
+        <% if (sync.hidden.length) { %>
+          <ul class="room-sync-hidden">
+            <% sync.hidden.forEach(function(room) { %>
+              <li><%= room.title %> <span><%= room.reason %></span></li>
+            <% }); %>
+          </ul>
+        <% } %>
+        <% if (last && last.warnings && last.warnings.length) { %>
+          <details>
+            <summary>Notes from the last sync (<%= last.warnings.length %>)</summary>
+            <ul>
+              <% last.warnings.forEach(function(note) { %><li><%= note %></li><% }); %>
+            </ul>
+          </details>
+        <% } %>
+      </section>
+    <% } %>
+
     <% if (success) { %>
       <div class="success-message"><%= success %></div>
     <% } %>
@@ -433,7 +493,7 @@
             <% listings.forEach(function(listing) { %>
               <tr data-id="<%= listing.id %>" data-title="<%= listing.title.toLowerCase() %>" data-location="<%= listing.location || 'New York' %>" data-status="<%= listing.status %>" data-bed="<%= listing.bedrooms %>" data-featured="<%= listing.featured ? 'yes' : 'no' %>" draggable="true">
                 <td><span class="drag-handle" title="Drag to reorder">⠿</span></td>
-                <td><strong><%= listing.title %></strong></td>
+                <td><strong><%= listing.title %></strong><% if (listing.source === 'portal') { %><span class="portal-tag" title="Synced from the portal: edits to synced fields are replaced on the next sync">From portal</span><% } %></td>
                 <td><%= listing.location || 'New York' %></td>
                 <td><%= listing.bedrooms === 0 ? 'Studio' : listing.bedrooms %></td>
                 <td class="price-cell">$<%= listing.price_monthly ? listing.price_monthly.toLocaleString() : '0' %>/mo</td>

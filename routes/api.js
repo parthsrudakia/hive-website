@@ -1,12 +1,15 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const pool = require('../db/pool');
 const { rewriteListingImages } = require('../utils/imageProxy');
+const { PUBLIC_LISTING_SQL } = require('../utils/listingVisibility');
+const { roomSyncConfig, runRoomSync } = require('../utils/roomSync');
 
 router.get('/listings', async (req, res) => {
   try {
     const { location, bedrooms, price_min, price_max } = req.query;
-    let query = `SELECT * FROM listings WHERE status != 'rented'`;
+    let query = `SELECT * FROM listings WHERE ${PUBLIC_LISTING_SQL}`;
     const params = [];
     let paramIndex = 1;
 
@@ -48,6 +51,31 @@ router.get('/listings', async (req, res) => {
   } catch (err) {
     console.error('Error fetching listings:', err);
     res.status(500).json({ error: 'Failed to fetch listings' });
+  }
+});
+
+// --- Room sync (Vercel cron, see vercel.json) ---
+// Copies the portal's rooms into listings (utils/roomSync.js). Vercel sends
+// "Authorization: Bearer $CRON_SECRET"; anything else is refused.
+router.get('/cron/room-sync', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET is not configured' });
+  const given = Buffer.from(req.get('authorization') || '');
+  const expected = Buffer.from(`Bearer ${secret}`);
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  const config = roomSyncConfig();
+  if (!config.enabled) {
+    return res.status(503).json({ error: `room sync is not configured (missing ${config.missing.join(', ')})` });
+  }
+  try {
+    const result = await runRoomSync();
+    res.status(result.ok || result.skipped ? 200 : 500).json(result);
+  } catch (err) {
+    console.error('[room-sync] cron error:', err);
+    res.status(500).json({ error: 'room sync failed' });
   }
 });
 

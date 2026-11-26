@@ -412,7 +412,14 @@ body {
             <input type="file" name="id_back" accept="image/*,application/pdf" required>
           </div>
         </div>
-        <p class="field-hint">Upload a clear photo of the front and back of a government-issued ID (JPEG, PNG or PDF, max 10&nbsp;MB each). Your ID is stored securely and never shared publicly.</p>
+        <p class="field-hint">Upload a clear photo of the front and back of a government-issued ID (JPEG, PNG or PDF). Photos are resized automatically; PDFs must be under 2&nbsp;MB each. Your ID is stored securely and never shared publicly.</p>
+
+        <div class="form-section-label">Proof of Income (Optional)</div>
+        <div class="form-group">
+          <label>Bank Statements / Pay Stubs</label>
+          <input type="file" name="income_docs" id="income-docs" accept="image/*,application/pdf" multiple>
+        </div>
+        <p class="field-hint">Optional. Select up to <%= maxIncomeDocs %> files at once: recent bank statements, pay stubs, or both (JPEG, PNG or PDF). Photos are resized automatically; PDFs can't be, so keep all your files under 4&nbsp;MB in total. Stored securely and never shared publicly.</p>
 
         <div class="form-section-label">Emergency Contact</div>
         <div class="form-row">
@@ -573,6 +580,49 @@ if (navMobile) {
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
 
+  // The host rejects any request body over 4.5 MB, and two phone photos of an
+  // ID easily exceed that. So photos are downscaled to JPEG in the browser
+  // before upload (an ID stays perfectly legible at 2000px). PDFs and anything
+  // the browser can't decode are sent as-is and caught by the size check below.
+  var MAX_TOTAL_UPLOAD = 4 * 1024 * 1024;
+  var SKIP_COMPRESS_UNDER = 900 * 1024;
+  var MAX_INCOME_DOCS = <%= maxIncomeDocs %>;
+  var TOO_LARGE_MSG = 'Your files are too large to upload together. Photos are resized automatically, so this is usually caused by large PDFs. Please keep all files under 4 MB in total (or upload photos instead of PDFs), then try again.';
+
+  function shrinkImage(file, maxDim, quality) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff'; // flatten transparent PNGs
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            URL.revokeObjectURL(url);
+            if (!blob || blob.size >= file.size) return resolve(file);
+            var name = (file.name || 'id').replace(/\.[^.]+$/, '') + '.jpg';
+            resolve(new File([blob], name, { type: 'image/jpeg' }));
+          }, 'image/jpeg', quality);
+        } catch (e) { URL.revokeObjectURL(url); resolve(file); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  async function prepareUpload(file) {
+    if (!file || !/^image\//.test(file.type || '') || file.size <= SKIP_COMPRESS_UNDER) return file;
+    var out = await shrinkImage(file, 2000, 0.82);
+    if (out.size > MAX_TOTAL_UPLOAD / 2) out = await shrinkImage(file, 1400, 0.7);
+    return out;
+  }
+
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearError();
@@ -586,11 +636,33 @@ if (navMobile) {
 
     try {
       // Multipart (includes the photo-ID files); let the browser set the boundary.
+      var fd = new FormData(form);
+      var total = 0;
+      for (var field of ['id_front', 'id_back']) {
+        var original = fd.get(field);
+        if (!(original instanceof File) || !original.size) continue;
+        var prepared = await prepareUpload(original);
+        fd.set(field, prepared, prepared.name);
+        total += prepared.size;
+      }
+      // Optional bank statements / pay stubs: same treatment, many files.
+      var docs = fd.getAll('income_docs').filter(function (d) { return d instanceof File && d.size; });
+      fd.delete('income_docs');
+      if (docs.length > MAX_INCOME_DOCS) { showError('Please upload at most ' + MAX_INCOME_DOCS + ' bank statement / pay stub files.'); submitBtn.disabled = false; submitBtn.textContent = 'Continue to Payment'; return; }
+      for (var doc of docs) {
+        var preparedDoc = await prepareUpload(doc);
+        fd.append('income_docs', preparedDoc, preparedDoc.name);
+        total += preparedDoc.size;
+      }
+      if (total > MAX_TOTAL_UPLOAD) { showError(TOO_LARGE_MSG); submitBtn.disabled = false; submitBtn.textContent = 'Continue to Payment'; return; }
+
       var res = await fetch('/apply-now/session', {
         method: 'POST',
-        body: new FormData(form)
+        body: fd
       });
-      var data = await res.json();
+      // The host's own "payload too large" page is plain text, not JSON.
+      if (res.status === 413) { showError(TOO_LARGE_MSG); submitBtn.disabled = false; submitBtn.textContent = 'Continue to Payment'; return; }
+      var data = await res.json().catch(function () { return {}; });
       if (!res.ok) { showError(data.error || 'Something went wrong. Please try again.'); submitBtn.disabled = false; submitBtn.textContent = 'Continue to Payment'; return; }
 
       overlay.classList.add('open');

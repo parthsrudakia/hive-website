@@ -4,8 +4,10 @@
 // makes the other a no-op, so confirmation emails are only ever sent once.
 const pool = require('../db/pool');
 const { sendMail, confirmationHtml, NOTIFY_EMAIL } = require('./mailer');
-const { signedPrivateUrl } = require('./storage');
 const { completeApplication } = require('./portalApplications');
+const { SITE_URL } = require('./seo');
+
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Marks the application matching this Checkout Session as paid and sends the
 // notification + applicant-confirmation emails. Returns the finalized row, or
@@ -42,10 +44,14 @@ async function finalizePaidApplication(session) {
   try {
     const a = app.answers || {};
     const row = (label, value) => `<tr><td style="padding:10px;border-bottom:1px solid #eee;font-weight:bold;width:200px;">${label}</td><td style="padding:10px;border-bottom:1px solid #eee;">${value || 'Not provided'}</td></tr>`;
-    // Short-lived signed links so the admin can view the photo IDs (private bucket).
-    const frontLink = await signedPrivateUrl(a.id_front_path).catch(() => null);
-    const backLink = await signedPrivateUrl(a.id_back_path).catch(() => null);
-    const idCell = (url) => url ? `<a href="${url}" style="color:#d4920b;">View (link valid 7 days)</a>` : 'Uploaded (open in admin)';
+    // Permanent links to the applicant's photo IDs. They point at the admin
+    // route (login required), which mints a fresh signed URL on every click,
+    // so the links in this email never expire and the IDs stay private.
+    const idLink = (side) => `${SITE_URL}/admin/paid-applications/${app.id}/id/${side}`;
+    const idCell = (path, side) => path ? `<a href="${idLink(side)}" style="color:#d4920b;">View (admin login required)</a>` : 'Not provided';
+    const docsCell = (Array.isArray(a.income_docs) ? a.income_docs : [])
+      .map((doc, i) => `<a href="${SITE_URL}/admin/paid-applications/${app.id}/doc/${i}" style="color:#d4920b;">${escapeHtml(doc.name || `Document ${i + 1}`)}</a>`)
+      .join('<br>');
     await sendMail({
       to: NOTIFY_EMAIL,
       replyTo: app.email,
@@ -60,8 +66,9 @@ async function finalizePaidApplication(session) {
           ${row('Birthdate', a.birthdate)}
           ${row('SSN (last 4)', a.ssn_last4 ? `***-**-${a.ssn_last4}` : null)}
           ${row('LinkedIn / Instagram', a.social_profile ? `<a href="${a.social_profile.startsWith('http') ? a.social_profile : 'https://' + a.social_profile}" style="color:#d4920b;">${a.social_profile}</a>` : null)}
-          ${row('Photo ID — Front', idCell(frontLink))}
-          ${row('Photo ID — Back', idCell(backLink))}
+          ${row('Photo ID — Front', idCell(a.id_front_path, 'front'))}
+          ${row('Photo ID — Back', idCell(a.id_back_path, 'back'))}
+          ${row('Bank Statements / Pay Stubs', docsCell)}
           ${row('Emergency Contact', a.emergency_contact_name)}
           ${row('Emergency — Phone', a.emergency_contact_phone)}
           ${row('Emergency — Email', a.emergency_contact_email)}
