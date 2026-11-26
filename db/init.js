@@ -51,12 +51,37 @@ async function init() {
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS transit TEXT`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS floor_plan_image VARCHAR(500)`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS location VARCHAR(100) DEFAULT 'New York'`,
-      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS key_amenities TEXT[] DEFAULT '{}'`
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS key_amenities TEXT[] DEFAULT '{}'`,
+      // Rooms synced from the portal (utils/roomSync.js); same as server.js.
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS portal_room_id VARCHAR(64)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS listings_portal_room_id_key ON listings (portal_room_id)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS source VARCHAR(20)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS hidden_reason VARCHAR(50)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS private_bath BOOLEAN`
     ];
 
     for (const sql of newColumns) {
       await pool.query(sql);
     }
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS room_sync_photos (
+        drive_file_id VARCHAR(128) PRIMARY KEY,
+        url TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS room_sync_state (
+        id INTEGER PRIMARY KEY,
+        running_since TIMESTAMP,
+        last_started_at TIMESTAMP,
+        last_finished_at TIMESTAMP,
+        last_result JSONB
+      );
+    `);
 
     console.log('Database tables created successfully.');
     process.exit(0);

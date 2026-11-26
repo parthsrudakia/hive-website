@@ -78,6 +78,10 @@ async function storeImage(file) {
 // Private bucket for sensitive uploads (e.g. applicant photo IDs). Never public —
 // objects are retrieved by admins via short-lived signed URLs. Stores and returns
 // the object *path* (not a public URL).
+//
+// The files themselves are kept forever: nothing here or elsewhere deletes or
+// expires them. Only the signed *view links* are short-lived, and a new one is
+// minted each time an admin opens an ID (see /admin/paid-applications/:id/id/:side).
 const PRIVATE_BUCKET = process.env.SUPABASE_PRIVATE_BUCKET || 'applicant-ids';
 
 async function storePrivateFile(file, prefix) {

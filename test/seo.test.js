@@ -133,7 +133,7 @@ test('builds an absolute sitemap with city and listing URLs', async () => {
 });
 
 test('renders URL-driven filters with canonical metadata', async () => {
-  const response = await fetch(`${baseUrl}/properties?location=New%20York&bedrooms=1`);
+  const response = await fetch(`${baseUrl}/properties?location=New%20York&bath=private`);
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /<title>Furnished Apartments in New York \| Hive<\/title>/);
@@ -141,9 +141,9 @@ test('renders URL-driven filters with canonical metadata', async () => {
   assert.match(html, /<meta name="robots" content="noindex, nofollow, noarchive">/);
   assert.match(html, /name="location"/);
   assert.match(html, /value="New York" selected/);
-  assert.match(html, /value="1" selected/);
+  assert.match(html, /value="private" selected/);
   assert.match(html, /1BR in a [a-z]+ apartment in SoHo/);
-  assert.ok(calls.some(call => call.params.includes('New York') && call.params.includes(1)));
+  assert.ok(calls.some(call => call.params.includes('New York') && call.params.includes(true)));
 });
 
 test('prevents arbitrary empty location pages from entering the index', async () => {

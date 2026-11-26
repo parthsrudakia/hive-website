@@ -201,7 +201,31 @@ app.use(session({
       `CREATE INDEX IF NOT EXISTS application_messages_app_idx ON application_messages (application_id, created_at)`,
       // Forgot-password flow: a hashed single-use reset token + expiry.
       `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR(64)`,
-      `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`
+      `ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`,
+      // Rooms synced from the portal (utils/roomSync.js). source 'portal' marks
+      // them; hidden_reason holds a room back (e.g. no photos yet). Never holds
+      // a street address, unit number or building name.
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS portal_room_id VARCHAR(64)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS listings_portal_room_id_key ON listings (portal_room_id)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS source VARCHAR(20)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS hidden_reason VARCHAR(50)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS private_bath BOOLEAN`,
+      // Drive photos already copied into the bucket, so each is copied once.
+      `CREATE TABLE IF NOT EXISTS room_sync_photos (
+        drive_file_id VARCHAR(128) PRIMARY KEY,
+        url TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      // Single row: the lock that keeps two syncs from overlapping, and the
+      // last run's result for the admin panel.
+      `CREATE TABLE IF NOT EXISTS room_sync_state (
+        id INTEGER PRIMARY KEY,
+        running_since TIMESTAMP,
+        last_started_at TIMESTAMP,
+        last_finished_at TIMESTAMP,
+        last_result JSONB
+      )`
     ];
     // Every cold start used to re-run all ~50 statements. Instead, record a
     // hash of the migration list and skip when the database already has it,
@@ -230,6 +254,9 @@ app.use(session({
 // get different descriptors, keeping titles distinct within a city.
 app.locals.publicTitle = function (listing) {
   if (!listing) return '';
+  // Rooms synced from the portal already carry a public title
+  // ("Room 3 in Journal Square"); see utils/roomSync.js.
+  if (listing.source === 'portal' && listing.title) return listing.title;
   const neighborhood = (listing.neighborhood && String(listing.neighborhood).trim())
     || (listing.city && String(listing.city).trim()) || 'the city';
   const beds = parseInt(listing.bedrooms, 10);
@@ -243,6 +270,17 @@ app.locals.publicTitle = function (listing) {
   const adj = ADJ[h % ADJ.length];
   const article = /^[aeiou]/i.test(adj) ? 'an' : 'a';
   return `${bedLabel} in ${article} ${adj} ${type} in ${neighborhood}`;
+};
+
+// Short facts for a room synced from the portal, shown on cards and the
+// listing page: ["Private room", "Shared bath", "Available Dec 15"].
+app.locals.roomFacts = function (listing) {
+  const facts = ['Private room', listing.private_bath ? 'Private bath' : 'Shared bath'];
+  const from = listing.available_from ? new Date(listing.available_from) : null;
+  facts.push(from && from > new Date()
+    ? 'Available ' + from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : 'Available now');
+  return facts;
 };
 
 // Google Maps JS API key for the approximate-area map (empty => iframe fallback).
