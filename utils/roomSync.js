@@ -10,7 +10,10 @@
 //    address, unit number and building name are never stored: the public
 //    title is "Room 3 in Journal Square" and only the neighborhood is shown.
 //  - Photos: the room's Google Drive folder (or single file) is listed with
-//    the Drive API (GOOGLE_DRIVE_API_KEY) and each image is copied once into
+//    the Drive API when GOOGLE_DRIVE_API_KEY is set, or otherwise read from
+//    the folder's public page (no key needed, see listPublicDriveImages).
+//    Either way the folder must be shared as "Anyone with the link", and
+//    each image is copied once into
 //    the listings bucket (utils/storage.js), keyed by its Drive file id in
 //    room_sync_photos, so it is never copied twice. A run spends at most
 //    TIME_BUDGET_MS copying; whatever is left goes on the next run.
@@ -33,6 +36,9 @@ const MAX_PHOTOS_PER_ROOM = 12;
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10 * 1000; // keeps a run inside a 60 s function limit
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+// Used when there is no API key: the public folder view and download link.
+const DRIVE_PUBLIC_FOLDER = 'https://drive.google.com/embeddedfolderview';
+const DRIVE_PUBLIC_DOWNLOAD = 'https://drive.usercontent.google.com/download';
 
 // Image types a browser can show (and utils/storage.js can optimize). Others,
 // such as iPhone HEIC files, are skipped and counted.
@@ -249,18 +255,83 @@ async function downloadDriveFile(file, link, driveKey, fetchImpl) {
   return buffer;
 }
 
+// --- Without an API key -----------------------------------------------------
+// A folder shared as "Anyone with the link" has a public page that lists its
+// files, and each file has a public download link. Neither is a documented
+// API, so every answer is checked: a page without the file list, or a
+// download that isn't an image, is reported and the room keeps what it has.
+
+const NOT_PUBLIC_HINT = '(is the folder shared as "Anyone with the link"?)';
+
+const decodeEntities = s => String(s)
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+
+// Files on a public folder page: [{ id, name, mimeType }]. Subfolders and
+// anything without a file type are left out. Returns null when the page
+// isn't a folder listing at all.
+function parsePublicFolderPage(html) {
+  const page = String(html || '');
+  if (!page.includes('flip-entries')) return null;
+  const files = [];
+  for (const block of page.split('<div class="flip-entry"').slice(1)) {
+    const id = /^\s+id="entry-([A-Za-z0-9_-]{10,})"/.exec(block);
+    const type = /flip-entry-list-icon"><img src="[^"]*\/type\/([a-z0-9.+-]+\/[a-z0-9.+-]+)"/i.exec(block);
+    const title = /<div class="flip-entry-title">([^<]*)<\/div>/.exec(block);
+    if (!id || !type) continue;
+    files.push({ id: id[1], name: title ? decodeEntities(title[1]).trim() : id[1], mimeType: type[1].toLowerCase() });
+  }
+  return files;
+}
+
+const publicParams = link => `id=${encodeURIComponent(link.id)}` +
+  (link.resourceKey ? `&resourcekey=${encodeURIComponent(link.resourceKey)}` : '');
+
+const byNaturalName = (a, b) =>
+  String(a.name).localeCompare(String(b.name), 'en', { numeric: true, sensitivity: 'base' });
+
+// Same result as listDriveImages, read from the public page instead.
+async function listPublicDriveImages(link, fetchImpl) {
+  if (link.kind === 'file') {
+    // A single file: its type is whatever the public download answers with.
+    const res = await fetchWithTimeout(fetchImpl, `${DRIVE_PUBLIC_DOWNLOAD}?${publicParams(link)}&export=download`);
+    const mimeType = String((res.headers && res.headers.get('content-type')) || '').split(';')[0].trim().toLowerCase();
+    if (res.body && typeof res.body.cancel === 'function') res.body.cancel().catch(() => {});
+    if (!res.ok) throw new Error(`Drive returned HTTP ${res.status} ${NOT_PUBLIC_HINT}`);
+    return /^image\//.test(mimeType) ? [{ id: link.id, name: link.id, mimeType }] : [];
+  }
+  const res = await fetchWithTimeout(fetchImpl, `${DRIVE_PUBLIC_FOLDER}?${publicParams(link)}`);
+  if (!res.ok) throw new Error(`Drive returned HTTP ${res.status} ${NOT_PUBLIC_HINT}`);
+  const files = parsePublicFolderPage(await res.text());
+  if (!files) throw new Error(`the Drive folder page could not be read ${NOT_PUBLIC_HINT}`);
+  return files.filter(f => /^image\//.test(f.mimeType)).sort(byNaturalName);
+}
+
+async function downloadPublicDriveFile(file, link, fetchImpl) {
+  const key = link.kind === 'file' && link.resourceKey ? `&resourcekey=${encodeURIComponent(link.resourceKey)}` : '';
+  const res = await fetchWithTimeout(fetchImpl,
+    `${DRIVE_PUBLIC_DOWNLOAD}?id=${encodeURIComponent(file.id)}${key}&export=download`);
+  if (!res.ok) throw new Error(`Drive returned HTTP ${res.status} ${NOT_PUBLIC_HINT}`);
+  // A sign-in or warning page comes back as HTML with status 200.
+  const type = String((res.headers && res.headers.get('content-type')) || '').toLowerCase();
+  if (!type.startsWith('image/')) throw new Error(`Drive did not return an image for ${file.name || file.id}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length > MAX_PHOTO_BYTES) throw new Error(`photo ${file.name || file.id} is over 25 MB`);
+  return buffer;
+}
+
 // Photos for one room. Returns { images, note, pending }; images is null when
 // this run couldn't check (keep what is stored).
 async function syncRoomPhotos(room, existingImages, ctx) {
   if (!room.photos_url || !String(room.photos_url).trim()) return { images: [], note: null, pending: 0 };
   const link = parseDriveLink(room.photos_url);
   if (!link) return { images: null, note: 'photo link is not a Google Drive folder or file', pending: 0 };
-  if (!ctx.config.driveKey) return { images: null, note: 'GOOGLE_DRIVE_API_KEY is not set', pending: 0 };
   if (ctx.outOfTime()) return { images: null, note: 'not checked this run (time budget)', pending: 0 };
 
   let files;
   try {
-    files = await listDriveImages(link, ctx.config.driveKey, ctx.fetchImpl);
+    files = ctx.config.driveKey
+      ? await listDriveImages(link, ctx.config.driveKey, ctx.fetchImpl)
+      : await listPublicDriveImages(link, ctx.fetchImpl);
   } catch (err) {
     return { images: null, note: `could not list photos: ${err.message}`, pending: 0 };
   }
@@ -274,7 +345,9 @@ async function syncRoomPhotos(room, existingImages, ctx) {
     if (ctx.photoMap.has(file.id)) continue;
     if (ctx.outOfTime()) { pending++; continue; }
     try {
-      const buffer = await downloadDriveFile(file, link, ctx.config.driveKey, ctx.fetchImpl);
+      const buffer = ctx.config.driveKey
+        ? await downloadDriveFile(file, link, ctx.config.driveKey, ctx.fetchImpl)
+        : await downloadPublicDriveFile(file, link, ctx.fetchImpl);
       const url = await ctx.storeImage({ buffer, mimetype: file.mimeType, originalname: file.name || `${file.id}.jpg` });
       await ctx.pool.query(
         'INSERT INTO room_sync_photos (drive_file_id, url) VALUES ($1, $2) ON CONFLICT (drive_file_id) DO NOTHING',
@@ -369,7 +442,6 @@ async function runRoomSync({
       stats: { copied: 0, skippedTypes: 0 },
       outOfTime: () => now() - startedAt > budgetMs
     };
-    if (!config.driveKey) result.warnings.push('GOOGLE_DRIVE_API_KEY is not set: no photos were copied');
 
     // Rooms with no photos yet go first, so a short run shows the most rooms.
     const valid = rooms.filter(r => r && r.id);
@@ -448,6 +520,7 @@ module.exports = {
   MAX_PHOTOS_PER_ROOM,
   roomSyncConfig,
   parseDriveLink,
+  parsePublicFolderPage,
   containsPrivateDetail,
   mapRoom,
   runRoomSync

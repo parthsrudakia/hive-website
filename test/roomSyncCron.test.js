@@ -5,10 +5,11 @@ const assert = require('node:assert/strict');
 const express = require('express');
 
 // The cron route only: no database or network is reached in these cases.
-for (const key of ['CRON_SECRET', 'PORTAL_URL', 'INVENTORY_API_KEY', 'GOOGLE_DRIVE_API_KEY']) delete process.env[key];
-
 const app = express();
 app.use('/api', require('../routes/api'));
+
+// Cleared after the routes load, because loading them reads .env.local.
+for (const key of ['CRON_SECRET', 'PORTAL_URL', 'INVENTORY_API_KEY', 'GOOGLE_DRIVE_API_KEY']) delete process.env[key];
 
 let server;
 let baseUrl;
