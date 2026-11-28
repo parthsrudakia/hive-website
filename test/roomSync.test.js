@@ -370,7 +370,8 @@ test('a failed inventory read changes nothing', async () => {
 test('does nothing when not configured', async () => {
   const pool = fakePool();
   const result = await run({ pool, env: {} });
-  assert.deepEqual(result, { ok: false, skipped: 'not configured', missing: ['PORTAL_URL', 'INVENTORY_API_KEY'] });
+  assert.deepEqual(result, { ok: false, skipped: 'not configured', missing: ['INVENTORY_API_KEY'] });
+  assert.equal(roomSyncConfig({ INVENTORY_API_KEY: 'k' }).portalUrl, 'https://portal.hiveny.com');
   assert.equal(pool.queries.length, 0);
   assert.equal(roomSyncConfig({ PORTAL_URL: 'https://x.test/', INVENTORY_API_KEY: 'k' }).portalUrl, 'https://x.test');
 });

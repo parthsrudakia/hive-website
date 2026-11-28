@@ -1,8 +1,10 @@
 // Server-to-server calls to the portal's application-invite API. The portal
 // owns the invite (room, rent, deposit); the website only checks a token on
 // /apply-now and, once the fee is paid, reports the applicant back so the
-// portal sends the agreement. PORTAL_URL is the same base the room sync uses;
+// portal sends the agreement. The portal's address is in utils/portal.js;
 // APPLICATIONS_API_KEY is shared with the portal.
+
+const { portalBaseUrl } = require('./portal');
 
 const INVITE_TIMEOUT_MS = 8000;
 const COMPLETE_TIMEOUT_MS = 20000;
@@ -13,7 +15,7 @@ const INVITE_REJECTIONS = new Set(['not_found', 'expired', 'used', 'cancelled', 
 const COMPLETE_REJECTIONS = new Set(['invalid_request', 'invalid_dates', 'not_found', 'expired', 'cancelled', 'used']);
 
 function portalConfig(env = process.env) {
-  const baseUrl = String(env.PORTAL_URL || '').trim().replace(/\/+$/, '');
+  const baseUrl = portalBaseUrl(env);
   const apiKey = String(env.APPLICATIONS_API_KEY || '').trim();
   return { baseUrl, apiKey, enabled: !!(baseUrl && apiKey) };
 }
@@ -50,7 +52,7 @@ function leaseDatesError(start, end, today = todayInNewYork()) {
 // error or a timeout comes back as { unavailable: true }.
 async function callPortal(path, { method = 'GET', body, timeoutMs, fetchImpl, env } = {}) {
   const config = portalConfig(env);
-  if (!config.enabled) return { unavailable: true, error: 'Portal is not configured (PORTAL_URL, APPLICATIONS_API_KEY)' };
+  if (!config.enabled) return { unavailable: true, error: 'Portal is not configured (APPLICATIONS_API_KEY)' };
   const doFetch = fetchImpl || globalThis.fetch;
   try {
     const headers = { Authorization: `Bearer ${config.apiKey}`, Accept: 'application/json' };

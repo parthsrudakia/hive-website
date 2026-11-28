@@ -4,7 +4,8 @@
 // the "Sync rooms now" button in admin; public pages only ever read the
 // database, never the portal or Drive.
 //
-//  - Source: GET {PORTAL_URL}/api/inventory (Bearer INVENTORY_API_KEY).
+//  - Source: GET https://portal.hiveny.com/api/inventory (utils/portal.js,
+//    Bearer INVENTORY_API_KEY).
 //  - Each room is upserted by portal_room_id with source 'portal'. Street
 //    address, unit number and building name are never stored: the public
 //    title is "Room 3 in Journal Square" and only the neighborhood is shown.
@@ -23,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 const { neighborhoodForName } = require('./markets');
+const { portalBaseUrl } = require('./portal');
 const { PORTAL_SOURCE, roomHiddenReason } = require('./listingVisibility');
 
 const TIME_BUDGET_MS = 40 * 1000;
@@ -48,13 +50,10 @@ const KEY_AMENITIES = {
 };
 
 function roomSyncConfig(env = process.env) {
-  const portalUrl = (env.PORTAL_URL || '').trim().replace(/\/+$/, '');
+  const portalUrl = portalBaseUrl(env);
   const inventoryKey = (env.INVENTORY_API_KEY || '').trim();
   const driveKey = (env.GOOGLE_DRIVE_API_KEY || '').trim();
-  const missing = [
-    !portalUrl && 'PORTAL_URL',
-    !inventoryKey && 'INVENTORY_API_KEY'
-  ].filter(Boolean);
+  const missing = [!inventoryKey && 'INVENTORY_API_KEY'].filter(Boolean);
   return { enabled: missing.length === 0, missing, portalUrl, inventoryKey, driveKey };
 }
 

@@ -50,7 +50,7 @@ test('the room sync cron says what is missing when the sync is not configured', 
   try {
     const res = await fetch(`${baseUrl}/api/cron/room-sync`, { headers: { Authorization: 'Bearer cron-test-secret' } });
     assert.equal(res.status, 503);
-    assert.deepEqual(await res.json(), { error: 'room sync is not configured (missing PORTAL_URL, INVENTORY_API_KEY)' });
+    assert.deepEqual(await res.json(), { error: 'room sync is not configured (missing INVENTORY_API_KEY)' });
   } finally {
     delete process.env.CRON_SECRET;
   }

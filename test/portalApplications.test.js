@@ -27,6 +27,7 @@ function portal(status, body) {
 test('reads the portal config and trims the trailing slash', () => {
   assert.deepEqual(portalConfig(ENV), { baseUrl: 'https://portal.test', apiKey: 'test-key', enabled: true });
   assert.equal(portalConfig({ PORTAL_URL: 'https://portal.test' }).enabled, false);
+  assert.deepEqual(portalConfig({ APPLICATIONS_API_KEY: 'test-key' }), { baseUrl: 'https://portal.hiveny.com', apiKey: 'test-key', enabled: true });
   assert.equal(portalConfig({}).enabled, false);
 });
 
