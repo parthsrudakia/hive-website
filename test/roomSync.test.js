@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   parseDriveLink,
+  parsePublicFolderPage,
   mapRoom,
   containsPrivateDetail,
   runRoomSync,
@@ -93,7 +94,23 @@ const DRIVE = {
 
 // --- Fakes ---
 
-function fakeFetch({ feed = FEED(), feedStatus = 200, drive = DRIVE, driveStatus = {} } = {}) {
+// A public Drive folder page, in the shape Drive serves it.
+const folderPage = (files, { subfolder = false } = {}) =>
+  '<html><head><title>Photos</title></head><body><div class="flip-entries">' +
+  (subfolder
+    ? '<div class="flip-entry" id="entry-SUBFOLDER0000001" tabindex="0" role="link"><div class="flip-entry-info">' +
+      '<a href="https://drive.google.com/drive/folders/SUBFOLDER0000001" target="_blank"><div class="flip-entry-icon">' +
+      '<div aria-label="Folder"></div></div><div class="flip-entry-title">Old</div></a></div></div>'
+    : '') +
+  files.map(f =>
+    `<div class="flip-entry" id="entry-${f.id}" tabindex="0" role="link"><div class="flip-entry-info">` +
+    `<a href="https://drive.google.com/file/d/${f.id}/view?usp=drive_web" target="_blank">` +
+    '<div class="flip-entry-thumb"><img src="https://lh3.googleusercontent.com/drive-storage/thumb=s190" alt=""/></div>' +
+    `<div class="flip-entry-list-icon"><img src="https://drive-thirdparty.googleusercontent.com/16/type/${f.mimeType}" alt=""/></div>` +
+    `<div class="flip-entry-title">${f.name.replace(/&/g, '&amp;')}</div></a></div></div>`).join('') +
+  '</div></body></html>';
+
+function fakeFetch({ feed = FEED(), feedStatus = 200, drive = DRIVE, driveStatus = {}, publicPages = {}, notImages = [] } = {}) {
   const calls = [];
   const fetchImpl = async (url, options = {}) => {
     calls.push({ url, headers: options.headers || {} });
@@ -103,6 +120,26 @@ function fakeFetch({ feed = FEED(), feedStatus = 200, drive = DRIVE, driveStatus
       json: async () => body,
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer
     });
+    // Drive without a key: the public folder page and the download link.
+    const page = (status, text, type) => ({
+      ok: status >= 200 && status < 300,
+      status,
+      headers: { get: name => (name.toLowerCase() === 'content-type' ? type : null) },
+      text: async () => text,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer
+    });
+    const publicFolder = url.match(/^https:\/\/drive\.google\.com\/embeddedfolderview\?id=([^&]+)/);
+    if (publicFolder) {
+      const folder = publicFolder[1];
+      if (driveStatus[folder]) return page(driveStatus[folder], '<title>Error 404 (Not Found)</title>', 'text/html');
+      if (publicPages[folder] !== undefined) return page(200, publicPages[folder], 'text/html');
+      return page(200, folderPage(drive[folder] || []), 'text/html');
+    }
+    const publicFile = url.match(/^https:\/\/drive\.usercontent\.google\.com\/download\?id=([^&]+)/);
+    if (publicFile) {
+      if (notImages.includes(publicFile[1])) return page(200, '<html>Sign in</html>', 'text/html; charset=utf-8');
+      return page(200, '', 'image/jpeg');
+    }
     if (url === `${PORTAL_URL}/api/inventory`) {
       if (options.headers.Authorization !== `Bearer ${ENV.INVENTORY_API_KEY}`) return json(401, { error: 'unauthorized' });
       return json(feedStatus, feedStatus === 200 ? { as_of: '2026-11-18', count: feed.length, rooms: feed } : { error: 'down' });
@@ -411,17 +448,92 @@ test('keeps at most the first photos of a folder', async () => {
   assert.equal(pool.listings.get('room-ues-1').images.length, MAX_PHOTOS_PER_ROOM);
 });
 
-test('without a Drive key the sync still runs and says why rooms have no photos', async () => {
+// --- Without a Drive API key: photos come from the public folder page ---
+
+const NO_KEY_ENV = { ...ENV, GOOGLE_DRIVE_API_KEY: '' };
+const runNoKey = ({ pool, fetch, store = fakeStore() }) => runRoomSync({
+  pool, fetchImpl: fetch.fetchImpl, storeImage: store.storeImage, env: NO_KEY_ENV, now: () => NOW, log: quietLog
+});
+
+test('reads the files on a public folder page and leaves out subfolders', () => {
+  const html = folderPage([
+    { id: 'filePUB0000001', name: 'living & dining.jpg', mimeType: 'image/jpeg' },
+    { id: 'filePUB0000002', name: 'tour.mp4', mimeType: 'video/mp4' }
+  ], { subfolder: true });
+  assert.deepEqual(parsePublicFolderPage(html), [
+    { id: 'filePUB0000001', name: 'living & dining.jpg', mimeType: 'image/jpeg' },
+    { id: 'filePUB0000002', name: 'tour.mp4', mimeType: 'video/mp4' }
+  ]);
+  assert.deepEqual(parsePublicFolderPage(folderPage([])), [], 'an empty folder is an empty list');
+  assert.equal(parsePublicFolderPage('<html>Sign in to continue</html>'), null, 'any other page is not a listing');
+});
+
+test('without a Drive key the photos are copied from the public folder page', async () => {
   const pool = fakePool();
-  const { fetchImpl, calls } = fakeFetch();
-  const result = await runRoomSync({
-    pool, fetchImpl, storeImage: fakeStore().storeImage, env: { ...ENV, GOOGLE_DRIVE_API_KEY: '' }, now: () => NOW, log: quietLog
+  const fetch = fakeFetch();
+  const store = fakeStore();
+  const result = await runNoKey({ pool, fetch, store });
+  assert.equal(result.ok, true);
+  assert.ok(!fetch.calls.some(c => c.url.includes('googleapis')), 'the Drive API is never called');
+  assert.equal(pool.listings.get('room-ues-1').images.length, 2);
+  assert.equal(pool.listings.get('room-ues-1').hidden_reason, null);
+  assert.equal(pool.listings.get('room-jsq-1').images.length, 2);
+  assert.equal(result.photos.copied, 4, 'a file in two folders is still copied once');
+  assert.equal(store.stored.length, 4);
+  assert.equal(result.photos.skipped_types, 1, 'the HEIC photo is skipped');
+  assert.ok(!result.warnings.some(w => /GOOGLE_DRIVE_API_KEY/.test(w)));
+
+  // A second run copies nothing new.
+  const again = await runNoKey({ pool, fetch, store });
+  assert.equal(again.photos.copied, 0);
+  assert.equal(pool.listings.get('room-ues-1').images.length, 2);
+});
+
+test('without a key, photos are ordered by the number in their name', async () => {
+  const numbered = ['10-bath.jpg', '2-room.jpg', '1-living.jpg'].map((name, i) => ({
+    id: `fileNUM00000${i}`, name, mimeType: 'image/jpeg'
+  }));
+  const pool = fakePool();
+  const store = fakeStore();
+  await runNoKey({ pool, fetch: fakeFetch({ drive: { ...DRIVE, FOLDERues0000001: numbered } }), store });
+  assert.deepEqual(store.stored.slice(0, 3).map(f => f.originalname), ['1-living.jpg', '2-room.jpg', '10-bath.jpg']);
+});
+
+test('without a key, a folder that is not public is skipped with the reason', async () => {
+  const pool = fakePool();
+  const result = await runNoKey({
+    pool,
+    fetch: fakeFetch({
+      driveStatus: { FOLDERues0000001: 404 },
+      publicPages: { FOLDERjsq0000001: '<html>Sign in to continue to Google Drive</html>' }
+    })
   });
   assert.equal(result.ok, true);
-  assert.ok(!calls.some(c => c.url.includes('googleapis')));
-  assert.ok(result.warnings.includes('GOOGLE_DRIVE_API_KEY is not set: no photos were copied'));
-  assert.ok(result.warnings.some(w => w.startsWith('Room 2 in Upper East Side: GOOGLE_DRIVE_API_KEY is not set')));
+  assert.match(result.warnings.find(w => w.startsWith('Room 2 in Upper East Side')),
+    /HTTP 404 \(is the folder shared as "Anyone with the link"\?\)/);
+  assert.match(result.warnings.find(w => w.startsWith('Room 1 in Journal Square')),
+    /folder page could not be read \(is the folder shared as "Anyone with the link"\?\)/);
   assert.equal(pool.listings.get('room-ues-1').hidden_reason, 'no_photos');
+});
+
+test('without a key, a download that is not an image is not stored', async () => {
+  const pool = fakePool();
+  const store = fakeStore();
+  const result = await runNoKey({ pool, fetch: fakeFetch({ notImages: ['fileUES0000001'] }), store });
+  assert.equal(result.ok, true);
+  assert.ok(result.warnings.some(w => /Drive did not return an image for 01-living\.jpg/.test(w)));
+  assert.equal(pool.listings.get('room-ues-1').images.length, 1, 'the other photo is still used');
+  assert.ok(!pool.photos.has('fileUES0000001'), 'so it is tried again next run');
+});
+
+test('without a key, a failed folder read keeps the photos a room already has', async () => {
+  const pool = fakePool();
+  const store = fakeStore();
+  await runNoKey({ pool, fetch: fakeFetch(), store });
+  const before = pool.listings.get('room-ues-1').images.slice();
+  await runNoKey({ pool, fetch: fakeFetch({ publicPages: { FOLDERues0000001: '<html>Sorry, unusual traffic</html>' } }), store });
+  assert.deepEqual(pool.listings.get('room-ues-1').images, before);
+  assert.equal(pool.listings.get('room-ues-1').hidden_reason, null);
 });
 
 test('a folder that is not shared is skipped with the reason, and the key never shows', async () => {
