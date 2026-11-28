@@ -12,10 +12,10 @@ const MARKET_PAGES = {
       'Financial District': ['FiDi'],
       'Battery Park City': ['Battery Park']
     },
-    title: 'Short-Term Furnished Rentals in New York | Hive',
-    description: 'Find short-term furnished rentals in New York for stays of 30 days or longer. Explore move-in ready apartments with WiFi, utilities, and flexible lease terms.',
+    title: 'Furnished Rentals in New York | Hive',
+    description: 'Find furnished rentals in New York for stays of 30 days or longer. Explore move-in ready apartments with WiFi, utilities, and flexible lease terms.',
     eyebrow: '30+ day stays in New York',
-    heading: 'Short-Term Furnished Rentals in New York',
+    heading: 'Furnished Rentals in New York',
     lede: 'Settle into a move-in ready New York apartment without committing to a traditional year-long lease. Hive homes are designed for stays of 30 days or longer, with furniture, WiFi, and utilities included in the monthly price.',
     guideTitle: 'A simpler way to rent furnished in New York',
     guideParagraphs: [
@@ -35,7 +35,7 @@ const MARKET_PAGES = {
       { title: 'Use your real stay dates', body: 'Availability can change quickly. Enter your intended move-in and move-out dates to narrow the homes that can cover your complete stay.' }
     ],
     faqs: [
-      { question: 'What counts as a short-term rental in New York on Hive?', answer: 'Hive uses short-term furnished rental to describe flexible stays of 30 days or longer. Individual availability and maximum stay length vary by apartment.' },
+      { question: 'What stay lengths does Hive offer in New York?', answer: 'Hive offers furnished rentals for flexible stays of 30 days or longer. Individual availability and maximum stay length vary by apartment.' },
       { question: 'Are Hive New York rentals furnished?', answer: 'Yes. Hive homes are offered furnished and move-in ready. The listing page explains the sleeping setup, amenities, and other apartment-specific details.' },
       { question: 'Are utilities and WiFi included?', answer: 'Hive monthly pricing includes WiFi and standard utilities. Review the listing and application terms for any apartment-specific details.' },
       { question: 'Do I have to pay a broker fee?', answer: 'No. Hive does not charge a broker fee for its furnished rental application process.' },
@@ -58,10 +58,10 @@ const MARKET_PAGES = {
     // already copied) stay out of every public list. Delete this one line to
     // show them; nothing else needs to change (utils/listingVisibility.js).
     comingSoon: true,
-    title: 'Short-Term Furnished Rentals in Jersey City | Hive',
-    description: 'Explore short-term furnished rentals in Jersey City for stays of 30 days or longer. Find move-in ready apartments with flexible terms near New York City.',
+    title: 'Furnished Rentals in Jersey City | Hive',
+    description: 'Explore furnished rentals in Jersey City for stays of 30 days or longer. Find move-in ready apartments with flexible terms near New York City.',
     eyebrow: '30+ day stays in Jersey City',
-    heading: 'Short-Term Furnished Rentals in Jersey City',
+    heading: 'Furnished Rentals in Jersey City',
     lede: 'Find a furnished Jersey City home for a month or longer, with the everyday essentials already in place. Hive offers flexible stays for relocations, temporary assignments, extended visits, and renters who want access to New York without a year-long commitment.',
     guideTitle: 'Flexible furnished living across the Hudson',
     guideParagraphs: [
@@ -97,10 +97,10 @@ const MARKET_PAGES = {
     neighborhoods: {
       Hoboken: []
     },
-    title: 'Short-Term Furnished Rentals in Hoboken | Hive',
-    description: 'Browse short-term furnished rentals in Hoboken for stays of 30 days or longer. Find flexible, move-in ready apartments with WiFi and utilities included.',
+    title: 'Furnished Rentals in Hoboken | Hive',
+    description: 'Browse furnished rentals in Hoboken for stays of 30 days or longer. Find flexible, move-in ready apartments with WiFi and utilities included.',
     eyebrow: '30+ day stays in Hoboken',
-    heading: 'Short-Term Furnished Rentals in Hoboken',
+    heading: 'Furnished Rentals in Hoboken',
     lede: 'Make Hoboken home for a month or longer with furniture, WiFi, and utilities already arranged. Hive’s flexible furnished rentals work for relocations, work assignments, extended visits, and anyone who needs more certainty than a temporary sublet.',
     guideTitle: 'A furnished monthly home in a walkable Hudson River city',
     guideParagraphs: [
