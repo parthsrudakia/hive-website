@@ -12,6 +12,7 @@ const { storeImage, signedPrivateUrl } = require('../utils/storage');
 const { sendMail, replyAddress, NOTIFY_EMAIL } = require('../utils/mailer');
 const PgRateLimitStore = require('../utils/pgRateLimitStore');
 const { rewriteReply, rewriteEnabled } = require('../utils/rewrite');
+const { processPendingAgreements } = require('../utils/tenantApplication');
 const { roomSyncConfig, runRoomSync } = require('../utils/roomSync');
 const { roomHiddenReason } = require('../utils/listingVisibility');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -904,6 +905,25 @@ router.get('/paid-applications/:id/id/:side', requireAdmin, async (req, res) => 
     console.error('ID view error:', err);
     res.status(500).send('Could not load ID');
   }
+});
+
+// Retry button for an invite application whose agreement is pending or
+// failed: queue it again and ask the portal right away.
+router.post('/paid-applications/:id/retry-agreement', requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.redirect('/admin/paid-applications');
+  try {
+    await pool.query(
+      `UPDATE tenant_applications SET agreement_status = 'pending'
+        WHERE id = $1 AND payment_status = 'paid' AND invite_token IS NOT NULL
+          AND agreement_status IN ('pending', 'failed')`,
+      [id]
+    );
+    await processPendingAgreements({ onlyId: id, limit: 1 });
+  } catch (err) {
+    console.error('Retry agreement error:', err);
+  }
+  res.redirect('/admin/paid-applications');
 });
 
 // Same idea for the optional bank statements / pay stubs (by position).

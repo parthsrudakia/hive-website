@@ -39,6 +39,8 @@
     .pill-pending { background: #f3f0e9; color: #7a6f5a; }
     .pill-processing { background: #eef2fb; color: #3b5bb5; }
     .pill-failed { background: #fdecea; color: #a3261c; }
+    .flag { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 4px; background: #fff7e6; color: #8a6d1b; font-size: 12px; font-weight: 600; }
+    .retry-form { display: block; margin: 6px 0 0; padding: 0; }
 
     .id-btn { display: inline-block; padding: 5px 12px; margin: 2px 4px 2px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: var(--ink); background: #f3ead6; border: 1px solid #e4d4ad; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
     .id-btn:hover { background: #ecdcb8; }
@@ -99,6 +101,8 @@
             <tr>
               <th>Applicant</th>
               <th>Contact</th>
+              <th>Room</th>
+              <th>Agreement</th>
               <th>Emergency Contact</th>
               <th>Photo ID</th>
               <th>Identity</th>
@@ -124,6 +128,38 @@
                 <div><%= app.email %></div>
                 <% if (app.phone) { %><div class="sub"><%= app.phone %></div><% } %>
                 <% if (a.social_profile) { %><div class="sub"><a href="<%= /^https?:\/\//i.test(a.social_profile) ? a.social_profile : 'https://' + a.social_profile %>" target="_blank" rel="noopener" style="color:#b87d09;">Social profile ↗</a></div><% } %>
+              </td>
+              <td>
+                <% if (app.invite_token) {
+                     var fmtDay = function (d) { return d ? new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : '?'; };
+                     var rent = app.invite_rent != null ? Number(app.invite_rent) : null;
+                %>
+                  <div><%= app.invite_room_label || 'Invite' %></div>
+                  <% if (app.invite_neighborhood || rent) { %><div class="sub"><%= [app.invite_neighborhood, rent ? '$' + rent.toLocaleString('en-US') + '/mo' : null].filter(Boolean).join(' · ') %></div><% } %>
+                  <div class="sub"><%= fmtDay(app.lease_start) %> to <%= fmtDay(app.lease_end) %></div>
+                <% } else { %><span class="sub">No invite</span><% } %>
+              </td>
+              <td>
+                <% var ag = app.agreement_status; %>
+                <% if (!ag) { %>
+                  <% if (app.invite_token) { %><span class="sub">Not queued</span><% } %>
+                <% } else if (ag === 'sent') { %>
+                  <span class="pill">Sent</span>
+                  <% if (app.agreement_sent_at) { %><div class="app-date"><%= new Date(app.agreement_sent_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) %></div><% } %>
+                <% } else if (ag === 'failed') { %>
+                  <span class="pill pill-failed">Failed</span>
+                  <% if (app.agreement_error) { %><div class="sub" style="max-width:220px;"><%= app.agreement_error %></div><% } %>
+                <% } else { %>
+                  <span class="pill pill-pending"><%= ag === 'sending' ? 'Sending' : 'Pending' %></span>
+                  <% if (app.agreement_attempts) { %><div class="sub"><%= app.agreement_attempts %> attempt<%= app.agreement_attempts === 1 ? '' : 's' %></div><% } %>
+                  <% if (app.agreement_error) { %><div class="sub" style="max-width:220px;"><%= app.agreement_error %></div><% } %>
+                <% } %>
+                <% if (app.agreement_email_differs) { %><div class="flag" title="The agreement went to the email the invite was sent to, not <%= app.email %>">Email differs from invite</div><% } %>
+                <% if (ag === 'pending' || ag === 'failed') { %>
+                  <form class="retry-form" action="/admin/paid-applications/<%= app.id %>/retry-agreement" method="POST">
+                    <button type="submit" class="id-btn">Retry</button>
+                  </form>
+                <% } %>
               </td>
               <td>
                 <div><%= a.emergency_contact_name || '—' %><% if (a.emergency_contact_relationship) { %> <span class="sub">(<%= a.emergency_contact_relationship %>)</span><% } %></div>

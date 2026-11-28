@@ -4,6 +4,7 @@
 // makes the other a no-op, so confirmation emails are only ever sent once.
 const pool = require('../db/pool');
 const { sendMail, confirmationHtml, NOTIFY_EMAIL } = require('./mailer');
+const { completeApplication } = require('./portalApplications');
 const { SITE_URL } = require('./seo');
 
 const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +20,9 @@ async function finalizePaidApplication(session) {
         SET payment_status = 'paid',
             paid_at = NOW(),
             stripe_payment_intent = $1,
-            amount_cents = COALESCE($3, amount_cents)
+            amount_cents = COALESCE($3, amount_cents),
+            -- Invite applications queue the portal agreement (see below).
+            agreement_status = CASE WHEN invite_token IS NOT NULL THEN 'pending' ELSE agreement_status END
       WHERE stripe_session_id = $2 AND payment_status <> 'paid'
       RETURNING id, full_name, email, phone, answers, identity_status`,
     [
@@ -96,4 +99,135 @@ async function finalizePaidApplication(session) {
   return app;
 }
 
-module.exports = { finalizePaidApplication };
+// ---------------------------------------------------------------------------
+// Agreement for invite applications. Once the fee is paid, the portal is told
+// about the applicant (utils/portalApplications.js) and sends the agreement.
+// agreement_status: 'pending' (queued or retrying), 'sending' (claimed by one
+// run), 'sent', or 'failed' (the portal refused; shown in admin). Runs after
+// every finalize, from the daily cron and from the admin Retry button.
+
+// A claim older than this is treated as a crashed run and taken over.
+const STALE_CLAIM = "INTERVAL '5 minutes'";
+
+const FAILURE_REASONS = {
+  expired: 'Invite expired: send the agreement from the portal by hand.',
+  cancelled: 'Invite was cancelled in the portal.',
+  used: 'Invite was already used by another application.',
+  not_found: 'Invite not found in the portal.',
+  invalid_dates: 'Portal rejected the lease dates',
+  invalid_request: 'Portal rejected the request',
+  missing_data: 'Application has no invite or lease dates.'
+};
+
+function failureReason(result) {
+  const base = FAILURE_REASONS[result.status] || 'Portal refused the application';
+  return result.error && !base.endsWith('.') ? `${base}: ${result.error}` : base;
+}
+
+// Takes one application for sending. Only one run can hold it, so the Stripe
+// webhook and the return page never both call the portal.
+async function claimAgreement(id) {
+  const { rows } = await pool.query(
+    `UPDATE tenant_applications
+        SET agreement_status = 'sending', agreement_claimed_at = NOW()
+      WHERE id = $1
+        AND payment_status = 'paid'
+        AND (agreement_status = 'pending'
+             OR (agreement_status = 'sending' AND agreement_claimed_at < NOW() - ${STALE_CLAIM}))
+      RETURNING id, full_name, email, phone, invite_token,
+                to_char(lease_start, 'YYYY-MM-DD') AS lease_start,
+                to_char(lease_end, 'YYYY-MM-DD') AS lease_end`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function sendOneAgreement(app) {
+  if (!app.invite_token || !app.lease_start || !app.lease_end) {
+    return { outcome: 'failed', status: 'missing_data', error: null };
+  }
+  try {
+    return await completeApplication({
+      token: app.invite_token,
+      full_name: app.full_name,
+      email: app.email,
+      phone: app.phone,
+      start_date: app.lease_start,
+      end_date: app.lease_end,
+      website_application_id: app.id
+    });
+  } catch (err) {
+    return { outcome: 'retry', status: 'error', error: err.message };
+  }
+}
+
+async function recordAgreementResult(id, result) {
+  if (result.outcome === 'sent') {
+    await pool.query(
+      `UPDATE tenant_applications
+          SET agreement_status = 'sent', agreement_request_id = $2, agreement_email_differs = $3,
+              agreement_sent_at = COALESCE(agreement_sent_at, NOW()), agreement_error = NULL,
+              agreement_attempts = agreement_attempts + 1, agreement_claimed_at = NULL
+        WHERE id = $1`,
+      [id, result.agreementRequestId, !!result.emailDiffers]
+    );
+    return;
+  }
+  const failed = result.outcome === 'failed';
+  await pool.query(
+    `UPDATE tenant_applications
+        SET agreement_status = $2, agreement_error = $3,
+            agreement_attempts = agreement_attempts + 1, agreement_claimed_at = NULL
+      WHERE id = $1`,
+    [id, failed ? 'failed' : 'pending', (failed ? failureReason(result) : result.error || 'Portal call failed').slice(0, 500)]
+  );
+}
+
+// Sends the agreement for up to `limit` queued applications. onlyId limits
+// the run to one application (admin Retry); preferSessionId puts the
+// application just paid first. No new portal call starts once budgetMs has
+// passed. Errors on one row are logged and never stop the others.
+async function processPendingAgreements({ onlyId = null, preferSessionId = null, limit = 3, budgetMs = 10000 } = {}) {
+  const started = Date.now();
+  const summary = { processed: 0, sent: 0, retry: 0, failed: 0 };
+  const { rows } = await pool.query(
+    `SELECT id FROM tenant_applications
+      WHERE payment_status = 'paid'
+        AND ($1::int IS NULL OR id = $1::int)
+        AND (agreement_status = 'pending'
+             OR (agreement_status = 'sending' AND agreement_claimed_at < NOW() - ${STALE_CLAIM}))
+      ORDER BY COALESCE(stripe_session_id = $2, false) DESC, paid_at ASC NULLS LAST, id ASC
+      LIMIT $3`,
+    [onlyId, preferSessionId, limit]
+  );
+  for (const { id } of rows) {
+    if (summary.processed > 0 && Date.now() - started > budgetMs) break;
+    try {
+      const app = await claimAgreement(id);
+      if (!app) continue; // another run has it
+      summary.processed++;
+      const result = await sendOneAgreement(app);
+      await recordAgreementResult(id, result);
+      summary[result.outcome]++;
+      if (result.outcome !== 'sent') {
+        console.warn(`[agreements] Application #${id}: ${result.outcome} (${result.status}) ${result.error || ''}`.trim());
+      }
+    } catch (err) {
+      console.error(`[agreements] Application #${id} error:`, err.message);
+    }
+  }
+  return summary;
+}
+
+// What both finalize callers run on every call (first or repeat), so a page
+// refresh or a webhook retry also retries a pending agreement. Never throws.
+async function sendAgreementsAfterPayment(session) {
+  try {
+    return await processPendingAgreements({ preferSessionId: (session && session.id) || null, limit: 3, budgetMs: 10000 });
+  } catch (err) {
+    console.error('[agreements] After-payment run failed:', err.message);
+    return null;
+  }
+}
+
+module.exports = { finalizePaidApplication, processPendingAgreements, sendAgreementsAfterPayment };

@@ -134,6 +134,26 @@ app.use(session({
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_verified_at TIMESTAMP`,
       `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS identity_last_error TEXT`,
       `CREATE INDEX IF NOT EXISTS tenant_applications_identity_idx ON tenant_applications (identity_session_id)`,
+      // Invite-only applications (/apply-now?invite=TOKEN): the portal invite,
+      // the applicant's lease dates, and a copy of the room shown on the form
+      // for admin (the portal keeps the real rent and deposit). agreement_*
+      // tracks the portal sending the agreement after payment, see
+      // utils/tenantApplication.js: NULL without an invite, else 'pending',
+      // 'sending', 'sent' or 'failed'.
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS invite_token VARCHAR(128)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS lease_start DATE`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS lease_end DATE`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS invite_room_label VARCHAR(100)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS invite_neighborhood VARCHAR(100)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS invite_rent NUMERIC(10,2)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_status VARCHAR(20)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_error TEXT`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_request_id VARCHAR(64)`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_attempts INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_claimed_at TIMESTAMP`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_sent_at TIMESTAMP`,
+      `ALTER TABLE tenant_applications ADD COLUMN IF NOT EXISTS agreement_email_differs BOOLEAN`,
+      `CREATE INDEX IF NOT EXISTS tenant_applications_agreement_idx ON tenant_applications (agreement_status) WHERE agreement_status IS NOT NULL`,
       // Which listing an /apply inquiry came from (via the listing page's "Join the waitlist"),
       // so the admin Applications tab can link straight to the property.
       `ALTER TABLE applications ADD COLUMN IF NOT EXISTS listing_id INTEGER`,
