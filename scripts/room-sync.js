@@ -6,7 +6,7 @@
  *
  *   node scripts/room-sync.js
  *
- * Needs PORTAL_URL, INVENTORY_API_KEY, GOOGLE_DRIVE_API_KEY, DATABASE_URL and
+ * Needs PORTAL_URL, INVENTORY_API_KEY, DATABASE_URL and
  * the Supabase storage variables in the environment. It writes to whichever
  * database DATABASE_URL points at.
  */
